@@ -8,6 +8,8 @@ uniform vec3 cameraPosition;
 uniform int directionalLights;
 uniform vec3 directionalLightDirections[2];
 uniform vec4 directionalLightColors[2];
+uniform mat4 directionalLightMVPs[2];
+uniform sampler2D directionalLightShadowMaps[2];
 
 //  ---- MESH SPECIFIC ----
 // MATERIAL

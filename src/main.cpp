@@ -38,7 +38,7 @@ int main()
     Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
     // Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
 
-    const lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
+    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
     // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
     std::vector directionalLights = {&sunlight};
 
@@ -70,6 +70,8 @@ int main()
     int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
     int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
     int uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
+    int uniformDirLightsMvps = genericShader.getUniformIndex("directionalLightMVPs");
+    int uniformDirLightsShadows = genericShader.getUniformIndex("directionalLightShadowMaps");
     int uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
     int uniformSpecCol = genericShader.getUniformIndex("specularColor");
     int uniformShine = genericShader.getUniformIndex("shininess");
@@ -116,38 +118,33 @@ int main()
         float aspectRatio = window.getAspectRatio();
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
 
-        // === Stub code for you to fill in order to render the shadow map ===
-        // {
-        //     // Bind the off-screen framebuffer
-        //     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        // Calculate shadow maps
+        for (auto dirLight : directionalLights) {
+            dirLight->shadowMap.enablePass();
+            // Clear the shadow map and set needed options
+            glClearDepth(1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
 
-        //     // Clear the shadow map and set needed options
-        //     glClearDepth(1.0f);
-        //     glClear(GL_DEPTH_BUFFER_BIT);
-        //     glEnable(GL_DEPTH_TEST);
+            // Bind the shader
+            shadowShader.bind();
 
-        //     // Bind the shader
-        //     shadowShader.bind();
+            // Set viewport size
+            glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
 
-        //     // Set viewport size
-        //     glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+            const glm::mat4 shadowMvp = dirLight->mvp;
+            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-        //     const glm::mat4 shadowMvp = mainProjectionMatrix * shadowCamera.viewMatrix(); // Assume model matrix is identity.
-        //     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
+            // Bind vertex data
+            for (auto meshDrawer : meshes)
+            {
+                glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshDrawer->transformation));
+                meshDrawer->draw();
+            }
+        }
 
-        //     // const glm::vec3 lightLocation = shadowCamera.cameraPos();
-        //     // glUniform3fv(1, 1, glm::value_ptr(lightLocation));
-
-        //     // Bind vertex data
-        //     for (auto meshDrawer : meshes)
-        //     {
-        //         meshDrawer->draw();
-        //     }
-
-        //     // Unbind the off-screen framebuffer
-        //     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        // }
-
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        
         // Clear the framebuffer to black and depth to maximum value
         glClearDepth(1.0f);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -171,18 +168,22 @@ int main()
         int lights = directionalLights.size();
         glm::vec3 directions[2];
         glm::vec4 colors[2];
+        glm::mat4 mvps[2];
 
         for (int i = 0; i < lights; i++) {
             directions[i] = directionalLights[i]->direction;
             colors[i] = directionalLights[i]->color;
+            mvps[i] = directionalLights[i]->mvp;
+            directionalLights[i]->shadowMap.bindUniform(uniformDirLightsShadows + 1);
         }
 
         glUniform1i(uniformNumDirLights, lights);
-        glUniform3fv(uniformDirLightDirs, 8, glm::value_ptr(directions[0]));
-        glUniform4fv(uniformDirLightsColors, 8, glm::value_ptr(colors[0]));
+        glUniform3fv(uniformDirLightDirs, 2, glm::value_ptr(directions[0]));
+        glUniform4fv(uniformDirLightsColors, 2, glm::value_ptr(colors[0]));
+        glUniformMatrix4fv(uniformDirLightsMvps, 2, GL_FALSE, glm::value_ptr(mvps[0]));
 
+        glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
         for (auto meshdrawer : meshes) {
-            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
             glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
 
             // set material properties
