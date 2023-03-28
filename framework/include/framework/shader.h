@@ -24,6 +24,7 @@ public:
     ~Shader();
 
     Shader& operator=(Shader&&);
+    GLuint m_program;
 
     // ... Feel free to add more methods here (e.g. for setting uniforms or keeping track of texture units) ...
 
@@ -32,9 +33,6 @@ public:
 private:
     friend class ShaderBuilder;
     Shader(GLuint program);
-
-private:
-    GLuint m_program;
 };
 
 class ShaderBuilder {
