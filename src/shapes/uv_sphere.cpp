@@ -1,3 +1,4 @@
+#pragma once
 #include <framework/mesh.h>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>

@@ -18,8 +18,9 @@ DISABLE_WARNINGS_POP()
 #include <vector>
 #include <string>
 
-#include "shapes/uv_sphere.cpp"
+#include "shapes/shapes.cpp"
 #include "util/drawMesh.cpp"
+#include "util/texture2D.cpp"
 #include "lights/directionalLight.cpp"
 
 // Configuration
@@ -36,7 +37,8 @@ int main()
     Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
     // Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
 
-    const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
+    const lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
+    // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
     std::vector directionalLights = {&sunlight};
 
     constexpr float fov = glm::pi<float>() / 4.0f;
@@ -62,56 +64,43 @@ int main()
         .addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl")
         .addStage(GL_FRAGMENT_SHADER, shaderDirectory + "generic_frag.glsl")
         .build();
-    int genericDirLightDirection = glGetUniformLocation(genericShader.m_program, "directionalLightDirections");
-    int genericDirLightColor = glGetUniformLocation(genericShader.m_program, "directionalLightColors");
+
+    int uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
+    int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
+    int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
+    int uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
+    int uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
+    int uniformSpecCol = genericShader.getUniformIndex("specularColor");
+    int uniformShine = genericShader.getUniformIndex("shininess");
+    int uniformUseTex = genericShader.getUniformIndex("useTexture");
+    int uniformUvTex = genericShader.getUniformIndex("uvTexture");
 
     // === Load a texture for exercise 5 ===
     // Create Texture
-    int texWidth, texHeight, texChannels;
-    stbi_uc *pixels = stbi_load("resources/smiley.png", &texWidth, &texHeight, &texChannels, 3);
-
-    GLuint texLight;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texLight);
-    glTextureStorage2D(texLight, 1, GL_RGB8, texWidth, texHeight);
-    glTextureSubImage2D(texLight, 0, 0, 0, texWidth, texHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
-    // Set behaviour for when texture coordinates are outside the [0, 1] range.
-    glTextureParameteri(texLight, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureParameteri(texLight, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // Set interpolation for texture sampling (GL_NEAREST for no interpolation).
-    glTextureParameteri(texLight, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTextureParameteri(texLight, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    util::Textured2D texture1("resources/smiley.png");
 
     // Load mesh from disk.
+    Mesh plane1 = shapes::plane();
+    MeshMaterial planeMaterial;
+    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    planeMaterial.texture = &texture1;
+    MeshDrawer plane1Drawer(&plane1, &planeMaterial);
+
     Mesh sphere1 = shapes::uv_unit_sphere(32, 32);
     sphere1.material.kd = glm::vec3(1);
     sphere1.material.ks = glm::vec3(1);
-    MeshDrawer sphere1Drawer(&sphere1);
 
-    std::vector<MeshDrawer *> meshes{&sphere1Drawer};
+    MeshMaterial sphereMaterial;
+    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    MeshDrawer sphere1Drawer(&sphere1, &sphereMaterial);
+
+    std::vector<MeshDrawer *> meshes{&sphere1Drawer, &plane1Drawer};
 
     // const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
-    // === Create Shadow Texture ===
-    GLuint texShadow;
-    const int SHADOWTEX_WIDTH = 1024;
-    const int SHADOWTEX_HEIGHT = 1024;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texShadow);
-    glTextureStorage2D(texShadow, 1, GL_DEPTH_COMPONENT32F, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
-
-    // Set behaviour for when texture coordinates are outside the [0, 1] range.
-    glTextureParameteri(texShadow, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureParameteri(texShadow, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // Set interpolation for texture sampling (GL_NEAREST for no interpolation).
-    glTextureParameteri(texShadow, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTextureParameteri(texShadow, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     // === Create framebuffer for extra texture ===
-    GLuint framebuffer;
-    glCreateFramebuffers(1, &framebuffer);
-    glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, texShadow, 0);
 
     // Main loop
     while (!window.shouldClose())
@@ -169,12 +158,12 @@ int main()
         // Bind the shader
         genericShader.bind();
 
-        const glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); // Assume model matrix is identity.
-        glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
+        // Assume model matrix is identity.
+        const glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
 
         // Set view position
         const glm::vec3 cameraPos = viewCamera.cameraPos();
-        glUniform3fv(1, 1, glm::value_ptr(cameraPos));
+        glUniform3fv(uniformCameraPos, 1, glm::value_ptr(cameraPos));
 
         int lights = directionalLights.size();
         glm::vec3 directions[8];
@@ -185,17 +174,28 @@ int main()
             colors[i] = directionalLights[i]->color;
         }
 
-        glUniform1i(4, lights);
-        glUniform3fv(genericDirLightDirection, 8, glm::value_ptr(directions[0]));
-        glUniform4fv(genericDirLightColor, 8, glm::value_ptr(colors[0]));
+        glUniform1i(uniformNumDirLights, lights);
+        glUniform3fv(uniformDirLightDirs, 8, glm::value_ptr(directions[0]));
+        glUniform4fv(uniformDirLightsColors, 8, glm::value_ptr(colors[0]));
 
         for (auto meshdrawer : meshes) {
+            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
+            
             // set material properties
-            auto ks = meshdrawer->workingMesh->material.ks;
-            auto shine = meshdrawer->workingMesh->material.shininess;
+            auto diffuse = meshdrawer->material->diffuseColor;
+            auto specular = meshdrawer->material->specularColor;
+            auto shine = meshdrawer->material->shininess;
 
-            glUniform3fv(2, 1, glm::value_ptr(ks));
-            glUniform1f(3, shine);
+            glUniform3fv(uniformDiffuseCol, 1, glm::value_ptr(diffuse));
+            glUniform3fv(uniformSpecCol, 1, glm::value_ptr(specular));
+            glUniform1f(uniformShine, shine);
+
+            if (meshdrawer->material->texture != NULL) {
+                glUniform1i(uniformUseTex, 1);
+                meshdrawer->material->texture->bindUniform(uniformUvTex);
+            } else {
+                glUniform1i(uniformUseTex, 0);
+            }
 
             meshdrawer->draw();
         }
@@ -203,11 +203,6 @@ int main()
         // Present result to the screen.
         window.swapBuffers();
     }
-
-    // Be a nice citizen and clean up after yourself.
-    glDeleteFramebuffers(1, &framebuffer);
-    glDeleteTextures(1, &texShadow);
-    glDeleteTextures(1, &texLight);
 
     return 0;
 }

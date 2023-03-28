@@ -1,3 +1,5 @@
+#pragma once
+
 #include <framework/disable_all_warnings.h>
 #include <framework/opengl_includes.h>
 DISABLE_WARNINGS_PUSH()
@@ -14,6 +16,18 @@ DISABLE_WARNINGS_POP()
 
 #include <framework/mesh.h>
 
+#include "../util/texture2D.cpp"
+
+class MeshMaterial
+{
+public:
+  glm::vec3 diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+  glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
+  float shininess = 1.0f;
+  
+  util::Textured2D* texture = NULL;
+};
+
 class MeshDrawer
 {
 private:
@@ -23,10 +37,12 @@ private:
 
 public:
   const Mesh *workingMesh;
+  const MeshMaterial *material;
 
-  MeshDrawer(const Mesh *mesh)
+  MeshDrawer(const Mesh *mesh, const MeshMaterial * mat)
   {
     workingMesh = mesh;
+    material = mat;
     init();
   }
 
@@ -51,8 +67,10 @@ public:
     // instead of the positions.
     glVertexArrayVertexBuffer(vertexArray, 0, vertexBuffer, offsetof(Vertex, position), sizeof(Vertex));
     glVertexArrayVertexBuffer(vertexArray, 1, vertexBuffer, offsetof(Vertex, normal), sizeof(Vertex));
+    glVertexArrayVertexBuffer(vertexArray, 2, vertexBuffer, offsetof(Vertex, texCoord), sizeof(Vertex));
     glEnableVertexArrayAttrib(vertexArray, 0);
     glEnableVertexArrayAttrib(vertexArray, 1);
+    glEnableVertexArrayAttrib(vertexArray, 2);
   }
 
   void draw()

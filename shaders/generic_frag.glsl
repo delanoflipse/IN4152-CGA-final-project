@@ -1,29 +1,42 @@
 #version 430
 
-// Global variables for lighting calculations
-//layout(location = 1) uniform vec3 viewPos;
-
-layout(location = 1) uniform vec3 cameraPosition;
-
-// MATERIAL
-layout(location = 2) uniform vec3 ks;
-layout(location = 3) uniform float shininess;
+//  ---- SCENE SPECIFIC ----
+// CAMERA
+uniform vec3 cameraPosition;
 
 // LIGHTS
-layout(location = 4) uniform int directionalLights;
+uniform int directionalLights;
 uniform vec3 directionalLightDirections[8];
 uniform vec4 directionalLightColors[8];
 
+//  ---- MESH SPECIFIC ----
+// MATERIAL
+uniform vec3 diffuseColor;
+uniform vec3 specularColor;
+uniform float shininess;
 
+// TEXTURES
+uniform int useTexture;
+uniform sampler2D uvTexture;
+
+
+//  ---- INPUT/OUTPUT ----
 // Output for on-screen color
 layout(location = 0) out vec4 outColor;
 
 // Interpolated output data from vertex shader
 in vec3 fragPos; // World-space position
 in vec3 fragNormal; // World-space normal
+in vec2 fragUv; // World-space normal
 
 void main()
 {
+  vec4 fragDiffuse = vec4(diffuseColor, 1);
+
+  if (useTexture == 1) {
+    fragDiffuse = texture(uvTexture, fragUv);
+  }
+
   vec4 colorSum = vec4(0);
   int directionLightCount = min(8, directionalLights);
   float sumFactor = 1 / float(directionLightCount);
@@ -39,8 +52,8 @@ void main()
     vec3 hVec = 0.5 * (reflecLight + fragToCam);
 
     // vec3 col = ks * lightColor.xyz * pow(dot(hVec, fragNormal), shininess);
-    vec3 diffuse = lambertian * lightColor.xyz;
-    vec4 colorConribution = vec4(diffuse, 1.0);
+    vec4 diffuse = lambertian * lightColor * fragDiffuse;
+    vec4 colorConribution = diffuse;
 
     // float factor = dot(hVec, fragNormal);
     // vec4 colorConribution = vec4(vec3(factor), 1.0);
