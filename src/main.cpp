@@ -19,25 +19,28 @@ DISABLE_WARNINGS_POP()
 #include <string>
 
 // Configuration
-const int WIDTH = 800;
-const int HEIGHT = 800;
+const int WIDTH = 1080;
+const int HEIGHT = 720;
+
+const std::string WINDOW_TITLE = "Group 8";
 
 int main()
 {
-    Window window{"Shadow Mapping", glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
+    Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
 
-    Camera viewCamera{&window, glm::vec3(1.2f, 1.1f, 0.9f), -glm::vec3(1.2f, 1.1f, 0.9f)};
+    Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
     Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
 
-    std::vector<Camera*> cameras = {&viewCamera, &shadowCamera};
+    std::vector<Camera *> cameras = {&viewCamera, &shadowCamera};
     int currentCameraIndex = 0;
 
     constexpr float fov = glm::pi<float>() / 4.0f;
 
     // === Modify for exercise 1 ===
     // Key handle function
-    window.registerKeyCallback([&](int key, int /* scancode */, int action, int /* mods */)
-                               {
+    window.registerKeyCallback([&](
+        int key, int /* scancode */, int action, int /* mods */)
+                            {
         switch (key) {
         case GLFW_KEY_1: {
            currentCameraIndex = 0;
@@ -76,8 +79,8 @@ int main()
     glTextureParameteri(texLight, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     // Load mesh from disk.
-    // const Mesh mesh = mergeMeshes(loadMesh("resources/scene.obj"));
-    const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
+    const Mesh mesh = mergeMeshes(loadMesh("resources/scene.obj"));
+    // const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
     // Create Element(Index) Buffer Object and Vertex Buffer Objects.
     GLuint ibo;
@@ -128,11 +131,13 @@ int main()
     while (!window.shouldClose())
     {
         window.updateInput();
-        Camera * currentCamera = cameras[currentCameraIndex];
+        Camera *currentCamera = cameras[currentCameraIndex];
+        currentCamera->updateInput();
         auto windowSize = window.getWindowSize();
-        
+
         // const glm::mat4 model { 1.0f };
-        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, window.getAspectRatio(), 0.1f, 30.0f);
+        float aspectRatio = window.getAspectRatio();
+        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
 
         // === Stub code for you to fill in order to render the shadow map ===
         {
@@ -170,7 +175,6 @@ int main()
         mainShader.bind();
         // peelShader.bind();
 
-        currentCamera->updateInput();
 
         const glm::mat4 mvp = mainProjectionMatrix * currentCamera->viewMatrix(); // Assume model matrix is identity.
         glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
@@ -184,6 +188,7 @@ int main()
 
         const glm::vec3 lightLocation = shadowCamera.cameraPos();
         glUniform3fv(4, 1, glm::value_ptr(lightLocation));
+        glUniform1f(6, aspectRatio);
 
         // Bind vertex data
         glBindVertexArray(vao);
@@ -193,16 +198,16 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texShadow);
         glUniform1i(2, 0);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texLight);
-        glUniform1i(5, 0);
+        // glActiveTexture(GL_TEXTURE0);
+        // glBindTexture(GL_TEXTURE_2D, texLight);
+        // glUniform1i(5, 0);
 
         // Set viewport size
         glViewport(0, 0, windowSize.x, windowSize.y);
 
         // Clear the framebuffer to black and depth to maximum value
         glClearDepth(1.0f);
-        glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);

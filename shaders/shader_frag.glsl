@@ -11,6 +11,7 @@ layout(location = 3) uniform mat4 lightMVP;
 layout(location = 4) uniform vec3 lightPos = vec3(3, 3, 3);
 
 layout(location = 5) uniform sampler2D texLight;
+layout(location = 6) uniform float aspectRatio;
 
 // Output for on-screen color.
 layout(location = 0) out vec4 outColor;
@@ -45,22 +46,24 @@ void main()
     float shadowMapDepth = texture(texShadow, shadowMapCoord).x;
     float shadowPosition = shadowMapDepth - fragLightDepth;
 
+
+    vec3 lightDir = normalize(lightPos - fragPos);
+    float lightOutput = max(0, dot(fragNormal, lightDir));
+
     if (outsideShadow || shadowPosition < -SHADOW_Z_OFFSET) {
     // if (outsideShadow) {
         outColor = vec4(0, 0, 0, 1);
         return;
     }
+    // vec4 lightColor = texture(texLight, shadowMapCoord);
+    // float lightIntensity = 1;
 
-    vec4 lightColor = texture(texLight, shadowMapCoord);
-    // float lightIntensity = 1 - pow(2 * length(vec2(0.5, 0.5) - shadowMapCoord), 3);
-    float lightIntensity = 1;
+    vec4 lightColor = vec4(1);
+    vec2 ratioAdjustedShadowMap = vec2(aspectRatio * shadowMapCoord.x, shadowMapCoord.y);
+    float lightIntensity = 1 - pow(2 * length(vec2(0.5, 0.5) - ratioAdjustedShadowMap), 2.5);
 
-    // Output the normal as color.
-    vec3 lightDir = normalize(lightPos - fragPos);
-    float lightOutput = max(0, dot(fragNormal, lightDir));
     
     vec4 light = lightIntensity * lightOutput * lightColor;
 
     outColor = light;
-    // outColor = lightColor;
 }
