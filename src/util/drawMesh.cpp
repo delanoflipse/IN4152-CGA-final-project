@@ -38,6 +38,7 @@ private:
 public:
   const Mesh *workingMesh;
   const MeshMaterial *material;
+  glm::mat4 transformation = glm::mat4(1.0f);
 
   MeshDrawer(const Mesh *mesh, const MeshMaterial * mat)
   {

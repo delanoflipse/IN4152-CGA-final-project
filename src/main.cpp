@@ -8,6 +8,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 // Library for loading an image
 #include <stb/stb_image.h>
+#include "imgui/imgui.h"
 DISABLE_WARNINGS_POP()
 #include <array>
 #include <framework/mesh.h>
@@ -86,6 +87,8 @@ int main()
     planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
     planeMaterial.texture = &texture1;
     MeshDrawer plane1Drawer(&plane1, &planeMaterial);
+    plane1Drawer.transformation *= glm::rotate(glm::mat4(1.0f), glm::radians(85.0f), glm::vec3(0, 0, 1));
+    plane1Drawer.transformation *= glm::scale(glm::mat4(1.0f), glm::vec3(3.0, 1.0, 1.5));
 
     Mesh sphere1 = shapes::uv_unit_sphere(32, 32);
     sphere1.material.kd = glm::vec3(1);
@@ -166,8 +169,8 @@ int main()
         glUniform3fv(uniformCameraPos, 1, glm::value_ptr(cameraPos));
 
         int lights = directionalLights.size();
-        glm::vec3 directions[8];
-        glm::vec4 colors[8];
+        glm::vec3 directions[2];
+        glm::vec4 colors[2];
 
         for (int i = 0; i < lights; i++) {
             directions[i] = directionalLights[i]->direction;
@@ -180,7 +183,8 @@ int main()
 
         for (auto meshdrawer : meshes) {
             glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
-            
+            glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
+
             // set material properties
             auto diffuse = meshdrawer->material->diffuseColor;
             auto specular = meshdrawer->material->specularColor;
@@ -200,8 +204,9 @@ int main()
             meshdrawer->draw();
         }
 
-        // Present result to the screen.
+        // ImGui::ShowMetricsWindow();
         window.swapBuffers();
+        
     }
 
     return 0;
