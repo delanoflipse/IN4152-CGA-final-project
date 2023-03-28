@@ -53,6 +53,12 @@ void Shader::bind() const
     glUseProgram(m_program);
 }
 
+int Shader::getUniformIndex(const char* variableName) const
+{
+    assert(m_program != invalid);
+    return glGetUniformLocation(m_program, variableName);
+}
+
 ShaderBuilder::~ShaderBuilder()
 {
     freeShaders();

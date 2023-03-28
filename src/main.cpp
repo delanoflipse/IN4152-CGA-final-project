@@ -18,36 +18,37 @@ DISABLE_WARNINGS_POP()
 #include <vector>
 #include <string>
 
+#include "shapes/shapes.cpp"
+#include "util/drawMesh.cpp"
+#include "util/texture2D.cpp"
+#include "lights/directionalLight.cpp"
+
 // Configuration
 const int WIDTH = 1080;
 const int HEIGHT = 720;
 
 const std::string WINDOW_TITLE = "Group 8";
+const std::string shaderDirectory = "../shaders/";
 
 int main()
 {
     Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
 
     Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
-    Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
+    // Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
 
-    std::vector<Camera *> cameras = {&viewCamera, &shadowCamera};
-    int currentCameraIndex = 0;
+    const lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
+    // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
+    std::vector directionalLights = {&sunlight};
 
     constexpr float fov = glm::pi<float>() / 4.0f;
 
-    // === Modify for exercise 1 ===
     // Key handle function
     window.registerKeyCallback([&](
-        int key, int /* scancode */, int action, int /* mods */)
-                            {
+                                   int key, int /* scancode */, int action, int /* mods */)
+                               {
         switch (key) {
         case GLFW_KEY_1: {
-           currentCameraIndex = 0;
-            break;
-        }
-        case GLFW_KEY_2:{
-          currentCameraIndex = 1;
             break;
         }
         default:
@@ -55,84 +56,57 @@ int main()
         }
     });
 
-    std::string shaderDirectory = "../shaders/";
     const Shader mainShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").addStage(GL_FRAGMENT_SHADER, shaderDirectory + "shader_frag.glsl").build();
     const Shader peelShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").addStage(GL_FRAGMENT_SHADER, shaderDirectory + "peel_frag.glsl").build();
     const Shader shadowShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").build();
 
+    const Shader genericShader = ShaderBuilder()
+        .addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl")
+        .addStage(GL_FRAGMENT_SHADER, shaderDirectory + "generic_frag.glsl")
+        .build();
+
+    int uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
+    int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
+    int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
+    int uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
+    int uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
+    int uniformSpecCol = genericShader.getUniformIndex("specularColor");
+    int uniformShine = genericShader.getUniformIndex("shininess");
+    int uniformUseTex = genericShader.getUniformIndex("useTexture");
+    int uniformUvTex = genericShader.getUniformIndex("uvTexture");
+
     // === Load a texture for exercise 5 ===
     // Create Texture
-    int texWidth, texHeight, texChannels;
-    stbi_uc *pixels = stbi_load("resources/smiley.png", &texWidth, &texHeight, &texChannels, 3);
-
-    GLuint texLight;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texLight);
-    glTextureStorage2D(texLight, 1, GL_RGB8, texWidth, texHeight);
-    glTextureSubImage2D(texLight, 0, 0, 0, texWidth, texHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
-
-    // Set behaviour for when texture coordinates are outside the [0, 1] range.
-    glTextureParameteri(texLight, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureParameteri(texLight, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // Set interpolation for texture sampling (GL_NEAREST for no interpolation).
-    glTextureParameteri(texLight, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTextureParameteri(texLight, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    util::Textured2D texture1("resources/smiley.png");
 
     // Load mesh from disk.
-    const Mesh mesh = mergeMeshes(loadMesh("resources/scene.obj"));
+    Mesh plane1 = shapes::plane();
+    MeshMaterial planeMaterial;
+    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    planeMaterial.texture = &texture1;
+    MeshDrawer plane1Drawer(&plane1, &planeMaterial);
+
+    Mesh sphere1 = shapes::uv_unit_sphere(32, 32);
+    sphere1.material.kd = glm::vec3(1);
+    sphere1.material.ks = glm::vec3(1);
+
+    MeshMaterial sphereMaterial;
+    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    MeshDrawer sphere1Drawer(&sphere1, &sphereMaterial);
+
+    std::vector<MeshDrawer *> meshes{&sphere1Drawer, &plane1Drawer};
+
     // const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
-    // Create Element(Index) Buffer Object and Vertex Buffer Objects.
-    GLuint ibo;
-    glCreateBuffers(1, &ibo);
-    glNamedBufferStorage(ibo, static_cast<GLsizeiptr>(mesh.triangles.size() * sizeof(decltype(Mesh::triangles)::value_type)), mesh.triangles.data(), 0);
-
-    GLuint vbo;
-    glCreateBuffers(1, &vbo);
-    glNamedBufferStorage(vbo, static_cast<GLsizeiptr>(mesh.vertices.size() * sizeof(Vertex)), mesh.vertices.data(), 0);
-
-    // Bind vertex data to shader inputs using their index (location).
-    // These bindings are stored in the Vertex Array Object.
-    GLuint vao;
-    glCreateVertexArrays(1, &vao);
-
-    // The indices (pointing to vertices) should be read from the index buffer.
-    glVertexArrayElementBuffer(vao, ibo);
-
-    // The position and normal vectors should be retrieved from the specified Vertex Buffer Object.
-    // The stride is the distance in bytes between vertices. We use the offset to point to the normals
-    // instead of the positions.
-    glVertexArrayVertexBuffer(vao, 0, vbo, offsetof(Vertex, position), sizeof(Vertex));
-    glVertexArrayVertexBuffer(vao, 1, vbo, offsetof(Vertex, normal), sizeof(Vertex));
-    glEnableVertexArrayAttrib(vao, 0);
-    glEnableVertexArrayAttrib(vao, 1);
-
-    // === Create Shadow Texture ===
-    GLuint texShadow;
-    const int SHADOWTEX_WIDTH = 1024;
-    const int SHADOWTEX_HEIGHT = 1024;
-    glCreateTextures(GL_TEXTURE_2D, 1, &texShadow);
-    glTextureStorage2D(texShadow, 1, GL_DEPTH_COMPONENT32F, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
-
-    // Set behaviour for when texture coordinates are outside the [0, 1] range.
-    glTextureParameteri(texShadow, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTextureParameteri(texShadow, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    // Set interpolation for texture sampling (GL_NEAREST for no interpolation).
-    glTextureParameteri(texShadow, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTextureParameteri(texShadow, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     // === Create framebuffer for extra texture ===
-    GLuint framebuffer;
-    glCreateFramebuffers(1, &framebuffer);
-    glNamedFramebufferTexture(framebuffer, GL_DEPTH_ATTACHMENT, texShadow, 0);
 
     // Main loop
     while (!window.shouldClose())
     {
         window.updateInput();
-        Camera *currentCamera = cameras[currentCameraIndex];
-        currentCamera->updateInput();
+        viewCamera.updateInput();
         auto windowSize = window.getWindowSize();
 
         // const glm::mat4 model { 1.0f };
@@ -140,70 +114,36 @@ int main()
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
 
         // === Stub code for you to fill in order to render the shadow map ===
-        {
-            // Bind the off-screen framebuffer
-            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        // {
+        //     // Bind the off-screen framebuffer
+        //     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 
-            // Clear the shadow map and set needed options
-            glClearDepth(1.0f);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);
+        //     // Clear the shadow map and set needed options
+        //     glClearDepth(1.0f);
+        //     glClear(GL_DEPTH_BUFFER_BIT);
+        //     glEnable(GL_DEPTH_TEST);
 
-            // Bind the shader
-            shadowShader.bind();
+        //     // Bind the shader
+        //     shadowShader.bind();
 
-            // Set viewport size
-            glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+        //     // Set viewport size
+        //     glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
 
-            const glm::mat4 shadowMvp = mainProjectionMatrix * shadowCamera.viewMatrix(); // Assume model matrix is identity.
-            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
+        //     const glm::mat4 shadowMvp = mainProjectionMatrix * shadowCamera.viewMatrix(); // Assume model matrix is identity.
+        //     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-            // const glm::vec3 lightLocation = shadowCamera.cameraPos();
-            // glUniform3fv(1, 1, glm::value_ptr(lightLocation));
+        //     // const glm::vec3 lightLocation = shadowCamera.cameraPos();
+        //     // glUniform3fv(1, 1, glm::value_ptr(lightLocation));
 
-            // Bind vertex data
-            glBindVertexArray(vao);
+        //     // Bind vertex data
+        //     for (auto meshDrawer : meshes)
+        //     {
+        //         meshDrawer->draw();
+        //     }
 
-            // Execute draw command
-            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.triangles.size() * 3), GL_UNSIGNED_INT, nullptr);
-
-            // Unbind the off-screen framebuffer
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
-
-        // Bind the shader
-        mainShader.bind();
-        // peelShader.bind();
-
-
-        const glm::mat4 mvp = mainProjectionMatrix * currentCamera->viewMatrix(); // Assume model matrix is identity.
-        glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
-
-        // Set view position
-        const glm::vec3 cameraPos = currentCamera->cameraPos();
-        glUniform3fv(1, 1, glm::value_ptr(cameraPos));
-
-        const glm::mat4 shadowMvp = mainProjectionMatrix * shadowCamera.viewMatrix(); // Assume model matrix is identity.
-        glUniformMatrix4fv(3, 1, GL_FALSE, glm::value_ptr(shadowMvp));
-
-        const glm::vec3 lightLocation = shadowCamera.cameraPos();
-        glUniform3fv(4, 1, glm::value_ptr(lightLocation));
-        glUniform1f(6, aspectRatio);
-
-        // Bind vertex data
-        glBindVertexArray(vao);
-
-        // Bind the shadow map to texture slot 0
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texShadow);
-        glUniform1i(2, 0);
-
-        // glActiveTexture(GL_TEXTURE0);
-        // glBindTexture(GL_TEXTURE_2D, texLight);
-        // glUniform1i(5, 0);
-
-        // Set viewport size
-        glViewport(0, 0, windowSize.x, windowSize.y);
+        //     // Unbind the off-screen framebuffer
+        //     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // }
 
         // Clear the framebuffer to black and depth to maximum value
         glClearDepth(1.0f);
@@ -212,20 +152,57 @@ int main()
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
 
-        // Execute draw command
-        glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(mesh.triangles.size() * 3), GL_UNSIGNED_INT, nullptr);
+        // Set viewport size
+        glViewport(0, 0, windowSize.x, windowSize.y);
+
+        // Bind the shader
+        genericShader.bind();
+
+        // Assume model matrix is identity.
+        const glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
+
+        // Set view position
+        const glm::vec3 cameraPos = viewCamera.cameraPos();
+        glUniform3fv(uniformCameraPos, 1, glm::value_ptr(cameraPos));
+
+        int lights = directionalLights.size();
+        glm::vec3 directions[8];
+        glm::vec4 colors[8];
+
+        for (int i = 0; i < lights; i++) {
+            directions[i] = directionalLights[i]->direction;
+            colors[i] = directionalLights[i]->color;
+        }
+
+        glUniform1i(uniformNumDirLights, lights);
+        glUniform3fv(uniformDirLightDirs, 8, glm::value_ptr(directions[0]));
+        glUniform4fv(uniformDirLightsColors, 8, glm::value_ptr(colors[0]));
+
+        for (auto meshdrawer : meshes) {
+            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
+            
+            // set material properties
+            auto diffuse = meshdrawer->material->diffuseColor;
+            auto specular = meshdrawer->material->specularColor;
+            auto shine = meshdrawer->material->shininess;
+
+            glUniform3fv(uniformDiffuseCol, 1, glm::value_ptr(diffuse));
+            glUniform3fv(uniformSpecCol, 1, glm::value_ptr(specular));
+            glUniform1f(uniformShine, shine);
+
+            if (meshdrawer->material->texture != NULL) {
+                glUniform1i(uniformUseTex, 1);
+                meshdrawer->material->texture->bindUniform(uniformUvTex);
+            } else {
+                glUniform1i(uniformUseTex, 0);
+            }
+
+            meshdrawer->draw();
+        }
 
         // Present result to the screen.
         window.swapBuffers();
     }
-
-    // Be a nice citizen and clean up after yourself.
-    glDeleteFramebuffers(1, &framebuffer);
-    glDeleteTextures(1, &texShadow);
-    glDeleteTextures(1, &texLight);
-    glDeleteBuffers(1, &ibo);
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
 
     return 0;
 }

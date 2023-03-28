@@ -15,16 +15,16 @@ else()
 	add_subdirectory("../../../framework/" "${CMAKE_BINARY_DIR}/framework/")
 endif()
 
-add_executable(Practical5 "src/main.cpp" "src/camera.cpp")
-target_compile_features(Practical5 PRIVATE cxx_std_20)
-target_link_libraries(Practical5 PRIVATE CGFramework)
-enable_sanitizers(Practical5)
-set_project_warnings(Practical5)
+add_executable(Group8FinalProject "src/main.cpp" "src/camera.cpp")
+target_compile_features(Group8FinalProject PRIVATE cxx_std_20)
+target_link_libraries(Group8FinalProject PRIVATE CGFramework)
+enable_sanitizers(Group8FinalProject)
+set_project_warnings(Group8FinalProject)
 
 # Copy all files in the resources folder to the build directory after every successful build.
-add_custom_command(TARGET Practical5 POST_BUILD
+add_custom_command(TARGET Group8FinalProject POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	"${CMAKE_CURRENT_LIST_DIR}/resources/" "$<TARGET_FILE_DIR:Practical5>/resources/")
+	"${CMAKE_CURRENT_LIST_DIR}/resources/" "$<TARGET_FILE_DIR:Group8FinalProject>/resources/")
 
 # We would like to copy the files when they changed. Even if no *.cpp files were modified (and
 # thus no build is triggered). We tell CMake that the executable depends on the shader files in
@@ -48,4 +48,4 @@ foreach (shader_file IN LISTS shader_sources)
 	LIST(APPEND shader_copies "${CMAKE_BINARY_DIR}/shaders/${file_name}")
 endforeach()
 add_custom_target(copy_shaders DEPENDS ${shader_copies})
-add_dependencies(Practical5 copy_shaders)
+add_dependencies(Group8FinalProject copy_shaders)

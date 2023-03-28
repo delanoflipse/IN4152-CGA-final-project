@@ -6,10 +6,12 @@ layout(location = 0) uniform mat4 mvp;
 // Per-vertex attributes
 layout(location = 0) in vec3 pos; // World-space position
 layout(location = 1) in vec3 normal; // World-space normal
+layout(location = 2) in vec2 uv; // World-space normal
 
 // Data to pass to fragment shader
 out vec3 fragPos;
 out vec3 fragNormal;
+out vec2 fragUv;
 
 void main() {
 	// Transform 3D position into on-screen position
@@ -18,4 +20,5 @@ void main() {
     // Pass position and normal through to fragment shader
     fragPos = pos;
     fragNormal = normal;
+    fragUv = uv;
 }

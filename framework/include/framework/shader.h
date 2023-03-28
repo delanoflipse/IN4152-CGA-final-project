@@ -28,13 +28,12 @@ public:
     // ... Feel free to add more methods here (e.g. for setting uniforms or keeping track of texture units) ...
 
     void bind() const;
-
-private:
-    friend class ShaderBuilder;
-    Shader(GLuint program);
+    int getUniformIndex(const char* variableName) const;
 
 private:
     GLuint m_program;
+    friend class ShaderBuilder;
+    Shader(GLuint program);
 };
 
 class ShaderBuilder {
