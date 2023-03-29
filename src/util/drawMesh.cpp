@@ -22,6 +22,7 @@ class MeshMaterial
 {
 public:
   glm::vec3 diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+  glm::vec3 ambientColor = glm::vec3(0.0f);
   glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
   float shininess = 1.0f;
   

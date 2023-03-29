@@ -33,37 +33,49 @@ in vec2 fragUv; // World-space normal
 
 void main()
 {
-  vec4 fragDiffuse = vec4(diffuseColor, 1);
+  vec4 fragDiffuseColor = vec4(diffuseColor, 1);
+  vec4 fragSpecularColor = vec4(specularColor, 1);
+
 
   if (useTexture == 1) {
-    fragDiffuse = texture(uvTexture, fragUv);
+    fragDiffuseColor = texture(uvTexture, fragUv);
+    // fragSpecularColor = fragDiffuseColor;
   }
 
   vec4 colorSum = vec4(0);
-  int directionLightCount = min(8, directionalLights);
-  float sumFactor = 1 / float(directionLightCount);
+  int directionLightCount = min(2, directionalLights);
 
   for (int i = 0; i < directionLightCount; i++) {
     vec3 lightDirection = directionalLightDirections[i];
     vec4 lightColor = directionalLightColors[i];
 
-    float lambertian = max(dot(lightDirection, fragNormal), 0.0);
+    float lightNormalAngle = dot(lightDirection, fragNormal);
+
+    // if (lightNormalAngle < 0) {
+    //   continue;
+    // }s
+
+    float lambertian = max(0, lightNormalAngle);
+    vec4 diffuse = lambertian * fragDiffuseColor;
   
     vec3 fragToCam = normalize(cameraPosition - fragPos);
-    vec3 reflecLight = reflect(lightDirection, fragNormal);
-    vec3 hVec = 0.5 * (reflecLight + fragToCam);
+    vec3 lightReflected = -reflect(lightDirection, fragNormal);
+    // vec3 h = 0.5 * (lightReflected + fragToCam);
 
-    // vec3 col = ks * lightColor.xyz * pow(dot(hVec, fragNormal), shininess);
-    vec4 diffuse = lambertian * lightColor * fragDiffuse;
-    vec4 colorConribution = diffuse;
+    float specularIntensity = max(0, pow(dot(lightReflected, fragToCam), shininess));
+    vec4 specular = fragSpecularColor * specularIntensity;
 
-    // float factor = dot(hVec, fragNormal);
-    // vec4 colorConribution = vec4(vec3(factor), 1.0);
-    colorSum += colorConribution;
+    // vec4 colorContribution = diffuse + vec4(specular.xyz, 0);
+    vec4 colorContribution = diffuse;
+    // vec4 colorContribution = vec4(vec3(specularIntensity), 1);
+
+    colorSum += colorContribution;
+    // colorSum += vec4(colorContribution.xyz, 1);
   }
 
   // Output the normal as color
-  outColor = sumFactor * colorSum;
+  vec4 finalColor = colorSum / float(directionLightCount);
+  outColor = vec4(finalColor.xyz, 1);
   // outColor = directionalLightColors[0];
   // outColor = vec4(1.0);
 }

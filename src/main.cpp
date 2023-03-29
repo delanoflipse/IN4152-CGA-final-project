@@ -23,6 +23,7 @@ DISABLE_WARNINGS_POP()
 #include "util/drawMesh.cpp"
 #include "util/texture2D.cpp"
 #include "lights/directionalLight.cpp"
+#include "entities/asteroid.cpp"
 
 // Configuration
 const int WIDTH = 1080;
@@ -30,6 +31,41 @@ const int HEIGHT = 720;
 
 const std::string WINDOW_TITLE = "Group 8";
 const std::string shaderDirectory = "../shaders/";
+
+int uniformCameraPos;
+int uniformNumDirLights;
+int uniformDirLightDirs;
+int uniformDirLightsColors;
+int uniformDirLightsMvps;
+int uniformDirLightsShadows;
+int uniformDiffuseCol;
+int uniformSpecCol;
+int uniformShine;
+int uniformUseTex;
+int uniformUvTex;
+
+
+void drawMesh(MeshDrawer * meshdrawer) {
+    glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
+
+    // set material properties
+    auto diffuse = meshdrawer->material->diffuseColor;
+    auto specular = meshdrawer->material->specularColor;
+    auto shininess = meshdrawer->material->shininess;
+
+    glUniform3fv(uniformDiffuseCol, 1, glm::value_ptr(diffuse));
+    glUniform3fv(uniformSpecCol, 1, glm::value_ptr(specular));
+    glUniform1f(uniformShine, shininess);
+
+    if (meshdrawer->material->texture != NULL) {
+        glUniform1i(uniformUseTex, 1);
+        meshdrawer->material->texture->bindUniform(uniformUvTex);
+    } else {
+        glUniform1i(uniformUseTex, 0);
+    }
+
+    meshdrawer->draw();
+}
 
 int main()
 {
@@ -66,21 +102,22 @@ int main()
         .addStage(GL_FRAGMENT_SHADER, shaderDirectory + "generic_frag.glsl")
         .build();
 
-    int uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
-    int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
-    int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
-    int uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
-    int uniformDirLightsMvps = genericShader.getUniformIndex("directionalLightMVPs");
-    int uniformDirLightsShadows = genericShader.getUniformIndex("directionalLightShadowMaps");
-    int uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
-    int uniformSpecCol = genericShader.getUniformIndex("specularColor");
-    int uniformShine = genericShader.getUniformIndex("shininess");
-    int uniformUseTex = genericShader.getUniformIndex("useTexture");
-    int uniformUvTex = genericShader.getUniformIndex("uvTexture");
+    uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
+    uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
+    uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
+    uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
+    uniformDirLightsMvps = genericShader.getUniformIndex("directionalLightMVPs");
+    uniformDirLightsShadows = genericShader.getUniformIndex("directionalLightShadowMaps");
+    uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
+    uniformSpecCol = genericShader.getUniformIndex("specularColor");
+    uniformShine = genericShader.getUniformIndex("shininess");
+    uniformUseTex = genericShader.getUniformIndex("useTexture");
+    uniformUvTex = genericShader.getUniformIndex("uvTexture");
 
     // === Load a texture for exercise 5 ===
     // Create Texture
     util::Textured2D texture1("resources/smiley.png");
+    util::Textured2D rockTexture("resources/rocks.jpg");
 
     // Load mesh from disk.
     Mesh plane1 = shapes::plane();
@@ -89,19 +126,27 @@ int main()
     planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
     planeMaterial.texture = &texture1;
     MeshDrawer plane1Drawer(&plane1, &planeMaterial);
-    plane1Drawer.transformation *= glm::rotate(glm::mat4(1.0f), glm::radians(85.0f), glm::vec3(0, 0, 1));
-    plane1Drawer.transformation *= glm::scale(glm::mat4(1.0f), glm::vec3(3.0, 1.0, 1.5));
 
-    Mesh sphere1 = shapes::uv_unit_sphere(32, 32);
-    sphere1.material.kd = glm::vec3(1);
-    sphere1.material.ks = glm::vec3(1);
+    // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
+    // Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
 
-    MeshMaterial sphereMaterial;
-    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    MeshDrawer sphere1Drawer(&sphere1, &sphereMaterial);
 
-    std::vector<MeshDrawer *> meshes{&sphere1Drawer, &plane1Drawer};
+    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
+
+    MeshMaterial asteroidMaterial;
+    asteroidMaterial.texture = &rockTexture;
+    asteroidMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
+    asteroidMaterial.shininess = 100;
+
+    MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
+
+    entities::Asteroid a1;
+    entities::Asteroid a2;
+    entities::Asteroid a3;
+    // a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(2.0, 0, 0));
+
+    std::vector<MeshDrawer *> meshes{&plane1Drawer};
+    std::vector<entities::Asteroid *> asteroids{&a1, &a2, &a3};
 
     // const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -119,29 +164,29 @@ int main()
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
 
         // Calculate shadow maps
-        for (auto dirLight : directionalLights) {
-            dirLight->shadowMap.enablePass();
-            // Clear the shadow map and set needed options
-            glClearDepth(1.0f);
-            glClear(GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_DEPTH_TEST);
+        // for (auto dirLight : directionalLights) {
+        //     dirLight->shadowMap.enablePass();
+        //     // Clear the shadow map and set needed options
+        //     glClearDepth(1.0f);
+        //     glClear(GL_DEPTH_BUFFER_BIT);
+        //     glEnable(GL_DEPTH_TEST);
 
-            // Bind the shader
-            shadowShader.bind();
+        //     // Bind the shader
+        //     shadowShader.bind();
 
-            // Set viewport size
-            glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
+        //     // Set viewport size
+        //     glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
 
-            const glm::mat4 shadowMvp = dirLight->mvp;
-            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
+        //     const glm::mat4 shadowMvp = dirLight->mvp;
+        //     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-            // Bind vertex data
-            for (auto meshDrawer : meshes)
-            {
-                glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshDrawer->transformation));
-                meshDrawer->draw();
-            }
-        }
+        //     // Bind vertex data
+        //     for (auto meshDrawer : meshes)
+        //     {
+        //         glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshDrawer->transformation));
+        //         meshDrawer->draw();
+        //     }
+        // }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         
@@ -183,26 +228,14 @@ int main()
         glUniformMatrix4fv(uniformDirLightsMvps, 2, GL_FALSE, glm::value_ptr(mvps[0]));
 
         glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
+
         for (auto meshdrawer : meshes) {
-            glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
+            drawMesh(meshdrawer);
+        }
 
-            // set material properties
-            auto diffuse = meshdrawer->material->diffuseColor;
-            auto specular = meshdrawer->material->specularColor;
-            auto shine = meshdrawer->material->shininess;
-
-            glUniform3fv(uniformDiffuseCol, 1, glm::value_ptr(diffuse));
-            glUniform3fv(uniformSpecCol, 1, glm::value_ptr(specular));
-            glUniform1f(uniformShine, shine);
-
-            if (meshdrawer->material->texture != NULL) {
-                glUniform1i(uniformUseTex, 1);
-                meshdrawer->material->texture->bindUniform(uniformUvTex);
-            } else {
-                glUniform1i(uniformUseTex, 0);
-            }
-
-            meshdrawer->draw();
+        for (auto asteroid : asteroids) {
+            asteroidDrawer.transformation = asteroid->baseTransformation * asteroid->currentTransformation;
+            drawMesh(&asteroidDrawer);
         }
 
         // ImGui::ShowMetricsWindow();
