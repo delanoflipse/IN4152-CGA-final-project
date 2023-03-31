@@ -14,7 +14,7 @@ namespace lights
     GLuint shadowMapTexture;
     GLuint framebuffer;
 
-    ShadowMap(int res = 2048)
+    ShadowMap(int res = 2048 * 2)
     {
       resolution = res;
       textureUnit = util::getTextureUnitId();
@@ -24,7 +24,7 @@ namespace lights
     void init()
     {
       glCreateTextures(GL_TEXTURE_2D, 1, &shadowMapTexture);
-      glTextureStorage2D(shadowMapTexture, 1, GL_RGB8, resolution, resolution);
+      glTextureStorage2D(shadowMapTexture, 1, GL_DEPTH_COMPONENT32F, resolution, resolution);
       glTextureParameteri(shadowMapTexture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
       glTextureParameteri(shadowMapTexture, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
