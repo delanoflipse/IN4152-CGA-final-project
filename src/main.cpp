@@ -72,6 +72,7 @@ int main()
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
+    util::Textured2D toonMap("resources/textures/toon_map.png");
     // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
 
     // === Load meshes  ===
@@ -81,9 +82,11 @@ int main()
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
     materials::GenericMaterial asteroidMaterial;
+    asteroidMaterial.toonTexture = &toonMap;
     asteroidMaterial.diffuseTexture = &rockTexture;
     asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
     asteroidMaterial.shininess = 64;
+    asteroidMaterial.toonUsage = 0.0f;
 
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;

@@ -32,6 +32,9 @@ uniform sampler2D shadowTexture;
 uniform int useOverlayTexture;
 uniform sampler2D overlayTexture;
 
+uniform float toonUsage;
+uniform sampler2D toonTexture;
+
 
 //  ---- INPUT/OUTPUT ----
 // Output for on-screen color
@@ -63,7 +66,8 @@ float getSpecular(vec3 lightDirection, vec3 cameraDirection)
 
 void main()
 {
-  vec3 cameraDirection = normalize(cameraPosition - fragPos);
+  vec3 toCamera = cameraPosition - fragPos;
+  vec3 cameraDirection = normalize(toCamera);
   // TODO: optinal?
   // if (dot(cameraDirection, fragNormal) < 0) {
   //   discard;
@@ -138,7 +142,18 @@ void main()
     float lightness = max(ambient, diffuse * shadowFactor);
     float specularness = specular * shadowFactor;
 
-    colorSum += mix(fragShadowColor, fragDiffuseColor, lightness) + specularness * fragSpecularColor * lightColor;
+
+    vec4 toonColor = vec4(0);
+    if (toonUsage > 0) {
+      float z = length(toCamera);
+      float dist = z / 10;
+      float brightness = max(lightness, specularness);
+      // toonColor = vec4(vec3(dist), 1);
+      toonColor = texture(toonTexture, vec2(brightness, 1 - dist));
+    }
+
+    vec4 genericColor = mix(fragShadowColor, fragDiffuseColor, lightness) + specularness * fragSpecularColor * lightColor;
+    colorSum += mix(genericColor, toonColor, toonUsage);
   }
 
   // Output the normal as color
