@@ -17,17 +17,8 @@ DISABLE_WARNINGS_POP()
 #include <framework/mesh.h>
 
 #include "../util/texture2D.cpp"
+#include "../materials/material.cpp"
 
-class MeshMaterial
-{
-public:
-  glm::vec3 diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-  glm::vec3 ambientColor = glm::vec3(0.0f);
-  glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
-  float shininess = 1.0f;
-  
-  util::Textured2D* texture = NULL;
-};
 
 class MeshDrawer
 {
@@ -38,10 +29,10 @@ private:
 
 public:
   const Mesh *workingMesh;
-  const MeshMaterial *material;
+  materials::Material *material;
   glm::mat4 transformation = glm::mat4(1.0f);
 
-  MeshDrawer(const Mesh *mesh, const MeshMaterial * mat)
+  MeshDrawer(const Mesh *mesh, materials::Material * mat)
   {
     workingMesh = mesh;
     material = mat;
@@ -75,8 +66,9 @@ public:
     glEnableVertexArrayAttrib(vertexArray, 2);
   }
 
-  void draw()
+  void draw(materials::MaterialContext context)
   {
+    material->activate(context, &transformation);
     // Bind vertex data.
     glBindVertexArray(vertexArray);
     // Execute draw command.

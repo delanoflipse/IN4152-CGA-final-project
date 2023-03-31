@@ -52,12 +52,13 @@ void Camera::rotateY(float angle)
 
 void Camera::updateInput()
 {
-    constexpr float moveSpeed = 0.05f;
     constexpr float lookSpeed = 0.0035f;
 
     if (m_userInteraction) {
         glm::vec3 localMoveDelta { 0 };
         const glm::vec3 right = glm::normalize(glm::cross(m_forward, m_up));
+        float moveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
+
         if (m_pWindow->isKeyPressed(GLFW_KEY_A))
             m_position -= moveSpeed * right;
         if (m_pWindow->isKeyPressed(GLFW_KEY_D))
