@@ -53,7 +53,7 @@ int main()
 
 
     Camera viewCamera{&window, glm::vec3(0.20f, 2.0f, 9.0f), glm::vec3(0.0f, 0.0f, -1.0f)};
-    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.f, 0.f)));
+    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
     // lights::DirectionalLight moonlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
     // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
     std::vector directionalLights = {&sunlight};
@@ -65,19 +65,14 @@ int main()
     // === Load textures ===
     util::Textured2D texture1("resources/smiley.png");
     util::Textured2D rockTexture("resources/rocks.jpg");
-    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
-    util::Textured2D earthCloudTexture("resources/textures/2k_earth_clouds.jpg");
+    // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
+    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
+    util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
     // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
-
-    // Mesh plane1 = shapes::plane();
-    // materials::GenericMaterial planeMaterial;
-    // planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    // planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    // planeMaterial.texture = &texture1;
-    // MeshDrawer plane1Drawer(&plane1, &planeMaterial);
-
 
     // === Load meshes  ===
     Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
@@ -107,9 +102,16 @@ int main()
     sunMaterial.useLights = false;
     sunMaterial.useShadows = false;
 
+    materials::GenericMaterial skyboxMaterial;
+    skyboxMaterial.diffuseTexture = &skyMap;
+    skyboxMaterial.shininess = 0;
+    skyboxMaterial.useLights = false;
+    skyboxMaterial.useShadows = false;
+
     MeshDrawer earthDrawer (&sphere1, &earthMaterial);
     MeshDrawer moonDrawer (&sphere1, &moonMaterial);
     MeshDrawer sunDrawer (&sphere1, &sunMaterial);
+    MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
 
@@ -134,7 +136,7 @@ int main()
         float aspectRatio = window.getAspectRatio();
 
         // const glm::mat4 model { 1.0f };
-        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
+        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
         // === Render shadow maps ===
         for (auto dirLight : directionalLights) {
@@ -205,11 +207,14 @@ int main()
 
         earthDrawer.draw(context);
 
-        moonDrawer.transformation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 5.0f, 10.0f));
+        moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
         moonDrawer.draw(context);
 
         sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
         sunDrawer.draw(context);
+
+        skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
+        skyboxDrawer.draw(context);
 
         glClear(GL_DEPTH_BUFFER_BIT);
 

@@ -64,9 +64,10 @@ float getSpecular(vec3 lightDirection, vec3 cameraDirection)
 void main()
 {
   vec3 cameraDirection = normalize(cameraPosition - fragPos);
-  if (dot(cameraDirection, fragNormal) < 0) {
-    discard;
-  }
+  // TODO: optinal?
+  // if (dot(cameraDirection, fragNormal) < 0) {
+  //   discard;
+  // }
 
   vec4 fragDiffuseColor = vec4(diffuseColor, 1);
   vec4 fragSpecularColor = vec4(specularColor, 1);
@@ -103,7 +104,7 @@ void main()
 
     if (useShadows == 1) {
       // vec4 fragLightCoord = directionalLightMVPs[i] * fragPos4;
-      vec4 fragLightCoord = directionalLightMVPs[i] * transformation *  origFragPos4;
+      vec4 fragLightCoord = directionalLightMVPs[i] *  fragPos4;
 
       // Divide by w because fragLightCoord are homogeneous coordinates
       vec3 asLightPosition = fragLightCoord.xyz / fragLightCoord.w;
