@@ -47,6 +47,8 @@ namespace shaders
     saveShaderVar(&generic, "overlayTexture");
     saveShaderVar(&generic, "useShadows");
     saveShaderVar(&generic, "useLights");
+    saveShaderVar(&generic, "toonUsage");
+    saveShaderVar(&generic, "toonTexture");
 
     saveShaderVar(&generic, "mvp");
     saveShaderVar(&generic, "transformation");

@@ -18,12 +18,15 @@ namespace materials
     glm::vec3 ambientColor = glm::vec3(0.0f);
     glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
     float shininess = 1.0f;
+    float toonUsage = 0.0f;
+
     bool useShadows = true;
     bool useLights = true;
 
     util::Textured2D *overlayTexture = NULL;
     util::Textured2D *diffuseTexture = NULL;
     util::Textured2D *shadowTexture = NULL;
+    util::Textured2D *toonTexture = NULL;
 
     GenericMaterial()
     {
@@ -89,6 +92,16 @@ namespace materials
       else
       {
         glUniform1i(shaders::generic.vars["useShadowTexture"], 0);
+      }
+
+      if (toonTexture != NULL)
+      {
+        glUniform1f(shaders::generic.vars["toonUsage"], toonUsage);
+        toonTexture->bindUniform(shaders::generic.vars["toonTexture"]);
+      }
+      else
+      {
+        glUniform1f(shaders::generic.vars["toonUsage"], 0.0f);
       }
     }
   };
