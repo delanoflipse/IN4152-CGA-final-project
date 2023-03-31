@@ -18,6 +18,7 @@ DISABLE_WARNINGS_POP()
 
 #include "../util/texture2D.cpp"
 #include "../materials/material.cpp"
+#include "../shaders/shaders.cpp"
 
 
 class MeshDrawer
@@ -66,13 +67,27 @@ public:
     glEnableVertexArrayAttrib(vertexArray, 2);
   }
 
-  void draw(materials::MaterialContext context)
+
+  void renderTriangles()
   {
-    material->activate(context, &transformation);
+
     // Bind vertex data.
     glBindVertexArray(vertexArray);
     // Execute draw command.
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(workingMesh->triangles.size()) * 3, GL_UNSIGNED_INT, nullptr);
+  }
+  
+  void draw(materials::MaterialContext context)
+  {
+    material->activate(context, &transformation);
+    renderTriangles();
+  }
+
+  void shadow()
+  {
+    int uniTransform = shaders::shadow.vars["transformation"];
+    glUniformMatrix4fv(uniTransform, 1, GL_FALSE, glm::value_ptr(transformation));
+    renderTriangles();
   }
 
   ~MeshDrawer()

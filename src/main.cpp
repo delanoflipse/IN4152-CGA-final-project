@@ -23,6 +23,7 @@ DISABLE_WARNINGS_POP()
 #include "util/drawMesh.cpp"
 #include "util/texture2D.cpp"
 #include "lights/directionalLight.cpp"
+#include "lights/shadowMap.cpp"
 #include "entities/asteroid.cpp"
 #include "materials/genericMaterial.cpp"
 #include "shaders/shaders.cpp"
@@ -52,7 +53,8 @@ int main()
 
 
     Camera viewCamera{&window, glm::vec3(0.20f, 2.0f, 9.0f), glm::vec3(0.0f, 0.0f, -1.0f)};
-    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
+    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(0.f, 1.f, 0.1f)));
+    // lights::DirectionalLight moonlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
     // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
     std::vector directionalLights = {&sunlight};
 
@@ -81,7 +83,7 @@ int main()
     materials::GenericMaterial asteroidMaterial;
     asteroidMaterial.texture = &rockTexture;
     asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
-    asteroidMaterial.shininess = 0;
+    asteroidMaterial.shininess = 64;
 
     MeshDrawer sphereDrawer (&sphere1, &asteroidMaterial);
     sphereDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -2.0f));
@@ -91,9 +93,9 @@ int main()
     entities::Asteroid a1;
     entities::Asteroid a2;
     entities::Asteroid a3;
-    a1.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(1.0, 2.0, 2.0));
-    a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(6.0, 0, 0));
-    a3.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(-4.0, 0, 0));
+    a1.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
+    a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 4, 0));
+    a3.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0.5, -4, 0));
 
     std::vector<MeshDrawer *> meshes{&sphereDrawer};
     // std::vector<entities::Asteroid *> asteroids{&a1};
@@ -112,29 +114,39 @@ int main()
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
 
         // === Render shadow maps ===
-        // for (auto dirLight : directionalLights) {
-        //     dirLight->shadowMap.enablePass();
-        //     // Clear the shadow map and set needed options
-        //     glClearDepth(1.0f);
-        //     glClear(GL_DEPTH_BUFFER_BIT);
-        //     glEnable(GL_DEPTH_TEST);
+        for (auto dirLight : directionalLights) {
+            dirLight->shadowMap.enablePass();
+            // Clear the shadow map and set needed options
+            glClearDepth(1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
 
-        //     // Bind the shader
-        //     shadowShader.bind();
+            // Bind the shader
+            shaders::shadow.shader.bind();
 
-        //     // Set viewport size
-        //     glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
+            // Set viewport size
+            glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
 
-        //     const glm::mat4 shadowMvp = dirLight->mvp;
-        //     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
+            const glm::mat4 shadowMvp = dirLight->mvp;
+            glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-        //     // Bind vertex data
-        //     for (auto meshDrawer : meshes)
-        //     {
-        //         glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshDrawer->transformation));
-        //         meshDrawer->draw();
-        //     }
-        // }
+
+            // Bind vertex data
+            for (auto meshDrawer : meshes)
+            {
+                meshDrawer->shadow();
+            }
+
+            for (auto asteroid : asteroids) {
+                asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+                asteroidDrawer.shadow();
+            }
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        
+        // window.swapBuffers();
+        // continue;
 
         // === Normal render ===
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -153,12 +165,13 @@ int main()
         glm::vec3 directions[2];
         glm::vec4 colors[2];
         glm::mat4 mvps[2];
+        lights::ShadowMap * shadows[2];
 
         for (int i = 0; i < lights; i++) {
             directions[i] = directionalLights[i]->direction;
             colors[i] = directionalLights[i]->color;
             mvps[i] = directionalLights[i]->mvp;
-            // directionalLights[i]->shadowMap.bindUniform(uniformDirLightsShadows + 1);
+            shadows[i] = &(directionalLights[i]->shadowMap);
         }
 
         materials::MaterialContext context {
@@ -168,6 +181,7 @@ int main()
             .directionLightDirections = directions,
             .directionLightColors = colors,
             .directionLightMvps = mvps,
+            .directionLightShadows = shadows,
         };
 
 

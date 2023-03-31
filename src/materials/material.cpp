@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../lights/shadowMap.cpp"
+
 namespace materials
 {
   struct MaterialContext {
@@ -10,7 +12,7 @@ namespace materials
     glm::vec3 * directionLightDirections;
     glm::vec4 * directionLightColors;
     glm::mat4 * directionLightMvps;
-    // TODO: shadow maps
+    lights::ShadowMap ** directionLightShadows;
   };
 
   class Material

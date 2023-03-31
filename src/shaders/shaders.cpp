@@ -40,6 +40,7 @@ namespace shaders
     saveShaderVar(&generic, "shininess");
     saveShaderVar(&generic, "useTexture");
     saveShaderVar(&generic, "uvTexture");
+
     saveShaderVar(&generic, "mvp");
     saveShaderVar(&generic, "transformation");
     saveShaderVar(&generic, "normalTransformation");
@@ -47,6 +48,10 @@ namespace shaders
     shadow.shader = ShaderBuilder()
                        .addStage(GL_VERTEX_SHADER, constants::SHADER_DIR + "shader_vert.glsl")
                        .build();
+
+    saveShaderVar(&shadow, "mvp");
+    saveShaderVar(&shadow, "transformation");
+    saveShaderVar(&shadow, "normalTransformation");
   };
 
 };

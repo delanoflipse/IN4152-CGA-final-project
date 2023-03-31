@@ -5,6 +5,7 @@
 #include "material.cpp"
 #include "../util/constants.cpp"
 #include "../util/texture2D.cpp"
+#include "../util/matrix.cpp"
 #include "../shaders/shaders.cpp"
 
 namespace materials
@@ -26,21 +27,28 @@ namespace materials
 
     void activate(MaterialContext context, glm::mat4 *transformation)
     {
-      // https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/transforming-normals.html
-      glm::mat3 normalTransformation = glm::transpose(glm::inverse(glm::mat3(*transformation)));
-
       // Bind the shader
       shaders::generic.shader.bind();
 
       // set context bindings
       glUniformMatrix4fv(shaders::generic.vars["mvp"], 1, GL_FALSE, glm::value_ptr(*context.mvp));
       glUniformMatrix4fv(shaders::generic.vars["transformation"], 1, GL_FALSE, glm::value_ptr(*transformation));
-      glUniformMatrix3fv(shaders::generic.vars["normalTransformation"], 1, GL_FALSE, glm::value_ptr(normalTransformation));
       glUniform3fv(shaders::generic.vars["cameraPosition"], 1, glm::value_ptr(*context.cameraPosition));
+
+      // https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/transforming-normals.html
+      glm::mat3 normalTransformation = math::asNormalTransform(*transformation);
+      glUniformMatrix3fv(shaders::generic.vars["normalTransformation"], 1, GL_FALSE, glm::value_ptr(normalTransformation));
+
+      
       glUniform1i(shaders::generic.vars["directionalLights"], context.directionalLights);
       glUniform3fv(shaders::generic.vars["directionalLightDirections"], 2, glm::value_ptr(context.directionLightDirections[0]));
       glUniform4fv(shaders::generic.vars["directionalLightColors"], 2, glm::value_ptr(context.directionLightColors[0]));
-      glUniformMatrix4fv(shaders::generic.vars["directionalLightMVPs"], 2, GL_FALSE, glm::value_ptr(context.directionLightMvps[0]));
+
+      int shadowTexture = shaders::generic.vars["directionalLightShadowMaps"];
+      for (int i = 0; i < context.directionalLights; i++) {
+        context.directionLightShadows[i]->bindUniform(shadowTexture + i);
+      glUniformMatrix4fv(shaders::generic.vars["directionalLightMVPs"] + i, 1, GL_FALSE, glm::value_ptr(context.directionLightMvps[i]));
+      }
 
       // set material values
       glUniform3fv(shaders::generic.vars["diffuseColor"], 1, glm::value_ptr(diffuseColor));

@@ -11,6 +11,7 @@ layout(location = 1) in vec3 normal; // World-space normal
 layout(location = 2) in vec2 uv; // World-space normal
 
 // Data to pass to fragment shader
+out vec3 origFragPos;
 out vec3 fragPos;
 out vec3 fragNormal;
 out vec2 fragUv;
@@ -22,6 +23,7 @@ void main() {
     gl_Position = mvp * realPos;
 
     // Pass position and normal through to fragment shader
+    origFragPos = pos;
     fragPos = realPos.xyz / realPos.w;
     // fragNormal = normalize(realNormal.xyz / realNormal.w);
     // fragNormal = normal;
