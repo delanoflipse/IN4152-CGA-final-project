@@ -53,7 +53,7 @@ int main()
 
 
     Camera viewCamera{&window, glm::vec3(0.20f, 2.0f, 9.0f), glm::vec3(0.0f, 0.0f, -1.0f)};
-    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(0.f, 1.f, 0.1f)));
+    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
     // lights::DirectionalLight moonlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
     // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
     std::vector directionalLights = {&sunlight};
@@ -65,14 +65,14 @@ int main()
     // === Load textures ===
     util::Textured2D texture1("resources/smiley.png");
     util::Textured2D rockTexture("resources/rocks.jpg");
-
-    // Mesh plane1 = shapes::plane();
-    // materials::GenericMaterial planeMaterial;
-    // planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    // planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    // planeMaterial.texture = &texture1;
-    // MeshDrawer plane1Drawer(&plane1, &planeMaterial);
-
+    // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
+    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
+    util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
+    util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
+    util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
+    // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
 
     // === Load meshes  ===
     Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
@@ -81,12 +81,37 @@ int main()
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
     materials::GenericMaterial asteroidMaterial;
-    asteroidMaterial.texture = &rockTexture;
+    asteroidMaterial.diffuseTexture = &rockTexture;
     asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
     asteroidMaterial.shininess = 64;
 
-    MeshDrawer sphereDrawer (&sphere1, &asteroidMaterial);
-    sphereDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -2.0f));
+    materials::GenericMaterial earthMaterial;
+    earthMaterial.diffuseTexture = &earthDayTexture;
+    earthMaterial.shadowTexture = &earthNightTexture;
+    earthMaterial.shininess = 0;
+    earthMaterial.useShadows = false;
+
+    materials::GenericMaterial moonMaterial;
+    moonMaterial.diffuseTexture = &moonTexture;
+    moonMaterial.shininess = 0;
+    moonMaterial.useShadows = false;
+
+    materials::GenericMaterial sunMaterial;
+    sunMaterial.diffuseColor = glm::vec4(.9922f, .9843f, .8275f, 1.0f);
+    sunMaterial.shininess = 0;
+    sunMaterial.useLights = false;
+    sunMaterial.useShadows = false;
+
+    materials::GenericMaterial skyboxMaterial;
+    skyboxMaterial.diffuseTexture = &skyMap;
+    skyboxMaterial.shininess = 0;
+    skyboxMaterial.useLights = false;
+    skyboxMaterial.useShadows = false;
+
+    MeshDrawer earthDrawer (&sphere1, &earthMaterial);
+    MeshDrawer moonDrawer (&sphere1, &moonMaterial);
+    MeshDrawer sunDrawer (&sphere1, &sunMaterial);
+    MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
 
@@ -97,7 +122,7 @@ int main()
     a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 4, 0));
     a3.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0.5, -4, 0));
 
-    std::vector<MeshDrawer *> meshes{&sphereDrawer};
+    // std::vector<MeshDrawer *> meshes{&earthDrawer};
     // std::vector<entities::Asteroid *> asteroids{&a1};
     std::vector<entities::Asteroid *> asteroids{&a1, &a2, &a3};
 
@@ -111,7 +136,7 @@ int main()
         float aspectRatio = window.getAspectRatio();
 
         // const glm::mat4 model { 1.0f };
-        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
+        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
         // === Render shadow maps ===
         for (auto dirLight : directionalLights) {
@@ -129,13 +154,6 @@ int main()
 
             const glm::mat4 shadowMvp = dirLight->mvp;
             glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
-
-
-            // Bind vertex data
-            for (auto meshDrawer : meshes)
-            {
-                meshDrawer->shadow();
-            }
 
             for (auto asteroid : asteroids) {
                 asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
@@ -184,15 +202,27 @@ int main()
             .directionLightShadows = shadows,
         };
 
+        // draw earth, moon and sun
+        earthDrawer.transformation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
 
-        for (auto meshdrawer : meshes) {
-            meshdrawer->draw(context);
-        }
+        earthDrawer.draw(context);
+
+        moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
+        moonDrawer.draw(context);
+
+        sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
+        sunDrawer.draw(context);
+
+        skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
+        skyboxDrawer.draw(context);
+
+        glClear(GL_DEPTH_BUFFER_BIT);
 
         for (auto asteroid : asteroids) {
             asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
             asteroidDrawer.draw(context);
         }
+        
 
         // ImGui::ShowMetricsWindow();
         window.swapBuffers();

@@ -38,8 +38,15 @@ namespace shaders
     saveShaderVar(&generic, "diffuseColor");
     saveShaderVar(&generic, "specularColor");
     saveShaderVar(&generic, "shininess");
-    saveShaderVar(&generic, "useTexture");
-    saveShaderVar(&generic, "uvTexture");
+    
+    saveShaderVar(&generic, "useDiffuseTexture");
+    saveShaderVar(&generic, "diffuseTexture");
+    saveShaderVar(&generic, "useShadowTexture");
+    saveShaderVar(&generic, "shadowTexture");
+    saveShaderVar(&generic, "useOverlayTexture");
+    saveShaderVar(&generic, "overlayTexture");
+    saveShaderVar(&generic, "useShadows");
+    saveShaderVar(&generic, "useLights");
 
     saveShaderVar(&generic, "mvp");
     saveShaderVar(&generic, "transformation");

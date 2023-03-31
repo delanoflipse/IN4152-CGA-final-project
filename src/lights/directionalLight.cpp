@@ -22,7 +22,7 @@ namespace lights
     {
       color = col;
       direction = dir;
-      float maxDim = 50.0f;
+      float maxDim = 100.0f;
       glm::mat4 view = glm::lookAt(
         glm::vec3(0, 0, 0),
         dir,

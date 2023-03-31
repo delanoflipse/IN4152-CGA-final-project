@@ -18,8 +18,12 @@ namespace materials
     glm::vec3 ambientColor = glm::vec3(0.0f);
     glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
     float shininess = 1.0f;
+    bool useShadows = true;
+    bool useLights = true;
 
-    util::Textured2D *texture = NULL;
+    util::Textured2D *overlayTexture = NULL;
+    util::Textured2D *diffuseTexture = NULL;
+    util::Textured2D *shadowTexture = NULL;
 
     GenericMaterial()
     {
@@ -44,9 +48,9 @@ namespace materials
       glUniform3fv(shaders::generic.vars["directionalLightDirections"], 2, glm::value_ptr(context.directionLightDirections[0]));
       glUniform4fv(shaders::generic.vars["directionalLightColors"], 2, glm::value_ptr(context.directionLightColors[0]));
 
-      int shadowTexture = shaders::generic.vars["directionalLightShadowMaps"];
+      int uniformShadowMap = shaders::generic.vars["directionalLightShadowMaps"];
       for (int i = 0; i < context.directionalLights; i++) {
-        context.directionLightShadows[i]->bindUniform(shadowTexture + i);
+        context.directionLightShadows[i]->bindUniform(uniformShadowMap + i);
       glUniformMatrix4fv(shaders::generic.vars["directionalLightMVPs"] + i, 1, GL_FALSE, glm::value_ptr(context.directionLightMvps[i]));
       }
 
@@ -55,14 +59,36 @@ namespace materials
       glUniform3fv(shaders::generic.vars["specularColor"], 1, glm::value_ptr(specularColor));
       glUniform1f(shaders::generic.vars["shininess"], shininess);
 
-      if (texture != NULL)
+      glUniform1i(shaders::generic.vars["useShadows"], useShadows ? 1 : 0);
+      glUniform1i(shaders::generic.vars["useLights"], useLights ? 1 : 0);
+      if (diffuseTexture != NULL)
       {
-        glUniform1i(shaders::generic.vars["useTexture"], 1);
-        texture->bindUniform(shaders::generic.vars["uvTexture"]);
+        glUniform1i(shaders::generic.vars["useDiffuseTexture"], 1);
+        diffuseTexture->bindUniform(shaders::generic.vars["diffuseTexture"]);
       }
       else
       {
-        glUniform1i(shaders::generic.vars["useTexture"], 0);
+        glUniform1i(shaders::generic.vars["useDiffuseTexture"], 0);
+      }
+
+      if (overlayTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useOverlayTexture"], 1);
+        overlayTexture->bindUniform(shaders::generic.vars["overlayTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useOverlayTexture"], 0);
+      }
+
+      if (shadowTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useShadowTexture"], 1);
+        shadowTexture->bindUniform(shaders::generic.vars["shadowTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useShadowTexture"], 0);
       }
     }
   };
