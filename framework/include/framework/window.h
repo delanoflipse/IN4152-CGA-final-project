@@ -42,6 +42,7 @@ public:
 	void registerWindowResizeCallback(WindowResizeCallback&&);
 
 	bool isKeyPressed(int key) const;
+	bool isKeyReleased(int key) const;
 	bool isMouseButtonPressed(int button) const;
 
 	// NOTE: coordinates are such that the origin is at the left bottom of the screen.
@@ -51,7 +52,7 @@ public:
 
 	// Hides mouse and prevents it from going out of the window.
 	// Useful for a first person camera.
-	void setMouseCapture(bool capture);
+	void setMouseCapture(bool capture) const;
 
 	[[nodiscard]] glm::ivec2 getWindowSize() const;
 	[[nodiscard]] glm::ivec2 getFrameBufferSize() const;
