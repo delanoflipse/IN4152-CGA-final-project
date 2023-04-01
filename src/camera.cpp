@@ -58,7 +58,7 @@ void Camera::rotateY(float angle)
 void Camera::updateInput()
 {
     constexpr float moveSpeed = 0.0001f;
-    constexpr float maxMoveSpeed = 0.005f;
+    float moveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
     constexpr float lookSpeed = 0.0035f;
     glm::vec3 acceleration = glm::vec3(0.0f);
 

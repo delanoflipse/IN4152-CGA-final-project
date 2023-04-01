@@ -17,16 +17,9 @@ DISABLE_WARNINGS_POP()
 #include <framework/mesh.h>
 
 #include "../util/texture2D.cpp"
+#include "../materials/material.cpp"
+#include "../shaders/shaders.cpp"
 
-class MeshMaterial
-{
-public:
-  glm::vec3 diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-  glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
-  float shininess = 1.0f;
-  
-  util::Textured2D* texture = NULL;
-};
 
 class MeshDrawer
 {
@@ -37,10 +30,10 @@ private:
 
 public:
   const Mesh *workingMesh;
-  const MeshMaterial *material;
+  materials::Material *material;
   glm::mat4 transformation = glm::mat4(1.0f);
 
-  MeshDrawer(const Mesh *mesh, const MeshMaterial * mat)
+  MeshDrawer(const Mesh *mesh, materials::Material * mat)
   {
     workingMesh = mesh;
     material = mat;
@@ -74,12 +67,27 @@ public:
     glEnableVertexArrayAttrib(vertexArray, 2);
   }
 
-  void draw()
+
+  void renderTriangles()
   {
+
     // Bind vertex data.
     glBindVertexArray(vertexArray);
     // Execute draw command.
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(workingMesh->triangles.size()) * 3, GL_UNSIGNED_INT, nullptr);
+  }
+  
+  void draw(materials::MaterialContext context)
+  {
+    material->activate(context, &transformation);
+    renderTriangles();
+  }
+
+  void shadow()
+  {
+    int uniTransform = shaders::shadow.vars["transformation"];
+    glUniformMatrix4fv(uniTransform, 1, GL_FALSE, glm::value_ptr(transformation));
+    renderTriangles();
   }
 
   ~MeshDrawer()

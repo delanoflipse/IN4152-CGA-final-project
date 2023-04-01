@@ -24,27 +24,21 @@ DISABLE_WARNINGS_POP()
 #include "util/drawMesh.cpp"
 #include "util/texture2D.cpp"
 #include "lights/directionalLight.cpp"
+#include "lights/shadowMap.cpp"
+#include "entities/asteroid.cpp"
+#include "materials/genericMaterial.cpp"
+#include "shaders/shaders.cpp"
 
 // Configuration
 const int WIDTH = 1080;
 const int HEIGHT = 720;
 
 const std::string WINDOW_TITLE = "Group 8";
-const std::string shaderDirectory = "shaders/";
 
 int main()
 {
     Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
     window.setMouseCapture(true);
-
-    Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
-    // Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
-
-    const lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
-    // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
-    std::vector directionalLights = {&sunlight};
-
-    constexpr float fov = glm::pi<float>() / 4.0f;
 
     // Key handle function
     window.registerKeyCallback([&](
@@ -59,160 +53,183 @@ int main()
         }
     });
 
-    const Shader mainShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").addStage(GL_FRAGMENT_SHADER, shaderDirectory + "shader_frag.glsl").build();
-    const Shader peelShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").addStage(GL_FRAGMENT_SHADER, shaderDirectory + "peel_frag.glsl").build();
-    const Shader shadowShader = ShaderBuilder().addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl").build();
+    Camera viewCamera{&window, glm::vec3(0.20f, 2.0f, 9.0f), glm::vec3(0.0f, 0.0f, -1.0f)};
+    lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
+    // lights::DirectionalLight moonlight(glm::vec4(1.0f), glm::vec3(0.f, 1.f, 0.f));
+    // const lights::DirectionalLight sunlight(glm::vec4(.9922f, .9843f, .8275f, 1.0f), glm::vec3(0.f, 1.f, 0.f));
+    std::vector directionalLights = {&sunlight};
 
-    const Shader genericShader = ShaderBuilder()
-        .addStage(GL_VERTEX_SHADER, shaderDirectory + "shader_vert.glsl")
-        .addStage(GL_FRAGMENT_SHADER, shaderDirectory + "generic_frag.glsl")
-        .build();
+    constexpr float fov = glm::pi<float>() / 4.0f;
 
-    int uniformMVP = genericShader.getUniformIndex("mvp");
-    int uniformTransform = genericShader.getUniformIndex("transformation");
-    int uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
-    int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
-    int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
-    int uniformDirLightsColors = genericShader.getUniformIndex("directionalLightColors");
-    int uniformDiffuseCol = genericShader.getUniformIndex("diffuseColor");
-    int uniformSpecCol = genericShader.getUniformIndex("specularColor");
-    int uniformShine = genericShader.getUniformIndex("shininess");
-    int uniformUseTex = genericShader.getUniformIndex("useTexture");
-    int uniformUvTex = genericShader.getUniformIndex("uvTexture");
+    shaders::loadShaders();
 
-    // === Load a texture for exercise 5 ===
-    // Create Texture
+    // === Load textures ===
     util::Textured2D texture1("resources/smiley.png");
+    util::Textured2D rockTexture("resources/rocks.jpg");
+    // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
+    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
+    util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
+    util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
+    // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
+    util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
+    util::Textured2D toonMap("resources/textures/toon_map.png");
+    // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
 
-    // Load mesh from disk.
-    Mesh plane1 = shapes::plane();
-    MeshMaterial planeMaterial;
-    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    planeMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    planeMaterial.texture = &texture1;
-    MeshDrawer plane1Drawer(&plane1, &planeMaterial);
-    plane1Drawer.transformation *= glm::rotate(glm::mat4(1.0f), glm::radians(85.0f), glm::vec3(0, 0, 1));
-    plane1Drawer.transformation *= glm::scale(glm::mat4(1.0f), glm::vec3(3.0, 1.0, 1.5));
+    // === Load meshes  ===
+    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
+    Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
+    // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
+    // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
-    Mesh sphere1 = shapes::uv_unit_sphere(32, 32);
-    sphere1.material.kd = glm::vec3(1);
-    sphere1.material.ks = glm::vec3(1);
+    materials::GenericMaterial asteroidMaterial;
+    asteroidMaterial.toonTexture = &toonMap;
+    asteroidMaterial.diffuseTexture = &rockTexture;
+    asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
+    asteroidMaterial.shininess = 64;
+    asteroidMaterial.toonUsage = 0.0f;
 
-    MeshMaterial sphereMaterial;
-    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    sphereMaterial.diffuseColor = glm::vec3(1.0f, 1.0f, 1.0f);
-    MeshDrawer sphere1Drawer(&sphere1, &sphereMaterial);
+    materials::GenericMaterial earthMaterial;
+    earthMaterial.diffuseTexture = &earthDayTexture;
+    earthMaterial.shadowTexture = &earthNightTexture;
+    earthMaterial.shininess = 0;
+    earthMaterial.useShadows = false;
 
-    std::vector<MeshDrawer *> meshes{&sphere1Drawer, &plane1Drawer};
+    materials::GenericMaterial moonMaterial;
+    moonMaterial.diffuseTexture = &moonTexture;
+    moonMaterial.shininess = 0;
+    moonMaterial.useShadows = false;
 
-    // const Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
+    materials::GenericMaterial sunMaterial;
+    sunMaterial.diffuseColor = glm::vec4(.9922f, .9843f, .8275f, 1.0f);
+    sunMaterial.shininess = 0;
+    sunMaterial.useLights = false;
+    sunMaterial.useShadows = false;
 
-    // === Create framebuffer for extra texture ===
+    materials::GenericMaterial skyboxMaterial;
+    skyboxMaterial.diffuseTexture = &skyMap;
+    skyboxMaterial.shininess = 0;
+    skyboxMaterial.useLights = false;
+    skyboxMaterial.useShadows = false;
+
+    MeshDrawer earthDrawer (&sphere1, &earthMaterial);
+    MeshDrawer moonDrawer (&sphere1, &moonMaterial);
+    MeshDrawer sunDrawer (&sphere1, &sunMaterial);
+    MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
+
+    MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
+
+    entities::Asteroid a1;
+    entities::Asteroid a2;
+    entities::Asteroid a3;
+    a1.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
+    a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 4, 0));
+    a3.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0.5, -4, 0));
+
+    // std::vector<MeshDrawer *> meshes{&earthDrawer};
+    // std::vector<entities::Asteroid *> asteroids{&a1};
+    std::vector<entities::Asteroid *> asteroids{&a1, &a2, &a3};
 
     // Main loop
     while (!window.shouldClose())
     {
         window.updateInput();
         viewCamera.updateInput();
-        auto windowSize = window.getWindowSize();
+
+        glm::ivec2 windowSize = window.getWindowSize();
+        float aspectRatio = window.getAspectRatio();
 
         // const glm::mat4 model { 1.0f };
-        float aspectRatio = window.getAspectRatio();
-        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 30.0f);
+        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
-        // === Stub code for you to fill in order to render the shadow map ===
-        // {
-        //     // Bind the off-screen framebuffer
-        //     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        // === Render shadow maps ===
+        for (auto dirLight : directionalLights) {
+            dirLight->shadowMap.enablePass();
+            // Clear the shadow map and set needed options
+            glClearDepth(1.0f);
+            glClear(GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
 
-        //     // Clear the shadow map and set needed options
-        //     glClearDepth(1.0f);
-        //     glClear(GL_DEPTH_BUFFER_BIT);
-        //     glEnable(GL_DEPTH_TEST);
+            // Bind the shader
+            shaders::shadow.shader.bind();
 
-        //     // Bind the shader
-        //     shadowShader.bind();
+            // Set viewport size
+            glViewport(0, 0, dirLight->shadowMap.resolution, dirLight->shadowMap.resolution);
 
-        //     // Set viewport size
-        //     glViewport(0, 0, SHADOWTEX_WIDTH, SHADOWTEX_HEIGHT);
+            const glm::mat4 shadowMvp = dirLight->mvp;
+            glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-        //     const glm::mat4 shadowMvp = mainProjectionMatrix * shadowCamera.viewMatrix(); // Assume model matrix is identity.
-        //     glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(shadowMvp));
+            for (auto asteroid : asteroids) {
+                asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+                asteroidDrawer.shadow();
+            }
 
-        //     // const glm::vec3 lightLocation = shadowCamera.cameraPos();
-        //     // glUniform3fv(1, 1, glm::value_ptr(lightLocation));
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
+        
+        // window.swapBuffers();
+        // continue;
 
-        //     // Bind vertex data
-        //     for (auto meshDrawer : meshes)
-        //     {
-        //         meshDrawer->draw();
-        //     }
-
-        //     // Unbind the off-screen framebuffer
-        //     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        // }
-
-        // Clear the framebuffer to black and depth to maximum value
+        // === Normal render ===
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClearDepth(1.0f);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
-
-        // Set viewport size
         glViewport(0, 0, windowSize.x, windowSize.y);
 
-        // Bind the shader
-        genericShader.bind();
+        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
 
-        // Assume model matrix is identity.
-        const glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
-
-        // Set view position
-        const glm::vec3 cameraPos = viewCamera.cameraPos();
-        glUniform3fv(uniformCameraPos, 1, glm::value_ptr(cameraPos));
+        glm::vec3 cameraPos = viewCamera.cameraPos();
 
         int lights = directionalLights.size();
         glm::vec3 directions[2];
         glm::vec4 colors[2];
+        glm::mat4 mvps[2];
+        lights::ShadowMap * shadows[2];
 
         for (int i = 0; i < lights; i++) {
             directions[i] = directionalLights[i]->direction;
             colors[i] = directionalLights[i]->color;
+            mvps[i] = directionalLights[i]->mvp;
+            shadows[i] = &(directionalLights[i]->shadowMap);
         }
 
-        glUniform1i(uniformNumDirLights, lights);
-        glUniform3fv(uniformDirLightDirs, 8, glm::value_ptr(directions[0]));
-        glUniform4fv(uniformDirLightsColors, 8, glm::value_ptr(colors[0]));
+        materials::MaterialContext context {
+            .mvp = &mvp,
+            .cameraPosition = &cameraPos,
+            .directionalLights = lights,
+            .directionLightDirections = directions,
+            .directionLightColors = colors,
+            .directionLightMvps = mvps,
+            .directionLightShadows = shadows,
+        };
 
-        meshes[0]->transformation = glm::translate(glm::mat4(1.0f), viewCamera.cameraPos() + viewCamera.m_forward * 5.0f);
+        // draw earth, moon and sun
+        earthDrawer.transformation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
 
-        for (auto meshdrawer : meshes) {
-            glUniformMatrix4fv(uniformMVP, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(uniformTransform, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
+        earthDrawer.draw(context);
 
-            // set material properties
-            auto diffuse = meshdrawer->material->diffuseColor;
-            auto specular = meshdrawer->material->specularColor;
-            auto shine = meshdrawer->material->shininess;
+        moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
+        moonDrawer.draw(context);
 
-            glUniform3fv(uniformDiffuseCol, 1, glm::value_ptr(diffuse));
-            glUniform3fv(uniformSpecCol, 1, glm::value_ptr(specular));
-            glUniform1f(uniformShine, shine);
+        sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
+        sunDrawer.draw(context);
 
-            if (meshdrawer->material->texture != NULL) {
-                glUniform1i(uniformUseTex, 1);
-                meshdrawer->material->texture->bindUniform(uniformUvTex);
-            } else {
-                glUniform1i(uniformUseTex, 0);
-            }
+        skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
+        skyboxDrawer.draw(context);
 
-            meshdrawer->draw();
+        glClear(GL_DEPTH_BUFFER_BIT);
+
+        for (auto asteroid : asteroids) {
+            asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+            asteroidDrawer.draw(context);
         }
+        
 
         // ImGui::ShowMetricsWindow();
         window.swapBuffers();
-        
     }
 
     return 0;
