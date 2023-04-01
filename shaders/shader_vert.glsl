@@ -1,8 +1,8 @@
 #version 450 core
 
 // Model/view/projection matrix
-layout(location = 0) uniform mat4 mvp;
-layout(location = 1) uniform mat4 transformation;
+uniform mat4 mvp;
+uniform mat4 transformation;
 
 // Per-vertex attributes
 layout(location = 0) in vec3 pos; // World-space position
