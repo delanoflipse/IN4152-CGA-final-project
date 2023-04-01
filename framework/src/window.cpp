@@ -310,6 +310,11 @@ bool Window::isKeyPressed(int key) const
     return glfwGetKey(m_pWindow, key) == GLFW_PRESS;
 }
 
+bool Window::isKeyReleased(int key) const
+{
+    return glfwGetKey(m_pWindow, key) == GLFW_RELEASE;
+}
+
 bool Window::isMouseButtonPressed(int button) const
 {
     return glfwGetMouseButton(m_pWindow, button) == GLFW_PRESS;
@@ -346,7 +351,7 @@ glm::vec2 Window::getCursorPixel() const
     return glm::vec2(pixelPos.x, pixelPos.y);
 }
 
-void Window::setMouseCapture(bool capture)
+void Window::setMouseCapture(bool capture) const
 {
     if (capture) {
         glfwSetInputMode(m_pWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

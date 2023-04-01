@@ -6,6 +6,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/vec3.hpp>
+#include "glm/gtx/string_cast.hpp"
 // Library for loading an image
 #include <stb/stb_image.h>
 #include "imgui/imgui.h"
@@ -29,11 +30,12 @@ const int WIDTH = 1080;
 const int HEIGHT = 720;
 
 const std::string WINDOW_TITLE = "Group 8";
-const std::string shaderDirectory = "../shaders/";
+const std::string shaderDirectory = "shaders/";
 
 int main()
 {
     Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
+    window.setMouseCapture(true);
 
     Camera viewCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
     // Camera shadowCamera{&window, glm::vec3(0.2f, 0.5f, 1.5f), -glm::vec3(1.2f, 1.1f, 0.9f)};
@@ -66,6 +68,8 @@ int main()
         .addStage(GL_FRAGMENT_SHADER, shaderDirectory + "generic_frag.glsl")
         .build();
 
+    int uniformMVP = genericShader.getUniformIndex("mvp");
+    int uniformTransform = genericShader.getUniformIndex("transformation");
     int uniformCameraPos = genericShader.getUniformIndex("cameraPosition");
     int uniformNumDirLights = genericShader.getUniformIndex("directionalLights");
     int uniformDirLightDirs = genericShader.getUniformIndex("directionalLightDirections");
@@ -181,9 +185,11 @@ int main()
         glUniform3fv(uniformDirLightDirs, 8, glm::value_ptr(directions[0]));
         glUniform4fv(uniformDirLightsColors, 8, glm::value_ptr(colors[0]));
 
+        meshes[0]->transformation = glm::translate(glm::mat4(1.0f), viewCamera.cameraPos() + viewCamera.m_forward * 5.0f);
+
         for (auto meshdrawer : meshes) {
-            glUniformMatrix4fv(0, 1, GL_FALSE, glm::value_ptr(mvp));
-            glUniformMatrix4fv(1, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
+            glUniformMatrix4fv(uniformMVP, 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniformMatrix4fv(uniformTransform, 1, GL_FALSE, glm::value_ptr(meshdrawer->transformation));
 
             // set material properties
             auto diffuse = meshdrawer->material->diffuseColor;

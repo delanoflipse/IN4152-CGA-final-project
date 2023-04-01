@@ -17,6 +17,7 @@ public:
 
     glm::vec3 cameraPos() const;
     glm::mat4 viewMatrix() const;
+    glm::vec3 m_forward{ 0, 0, -1 };
 
 private:
     void rotateX(float angle);
@@ -24,9 +25,9 @@ private:
 
 private:
     static constexpr glm::vec3 s_yAxis { 0, 1, 0 };
-    glm::vec3 m_position { 0 };
-    glm::vec3 m_forward { 0, 0, -1 };
+    glm::vec3 m_position { 0, 0, 2.0f };
     glm::vec3 m_up { 0, 1, 0 };
+    glm::vec3 m_velocity = glm::vec3(0.0f);
 
     const Window* m_pWindow;
     bool m_userInteraction { true };
