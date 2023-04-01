@@ -79,6 +79,7 @@ int main()
     // === Load meshes  ===
     Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
     Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
+    Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/spaceship.obj"));
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -118,6 +119,7 @@ int main()
     MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
+    MeshDrawer spaceshipDrawer(&spaceshipMesh, &asteroidMaterial);
 
     entities::Asteroid a1;
     entities::Asteroid a2;
@@ -129,6 +131,7 @@ int main()
     // std::vector<MeshDrawer *> meshes{&earthDrawer};
     // std::vector<entities::Asteroid *> asteroids{&a1};
     std::vector<entities::Asteroid *> asteroids{&a1, &a2, &a3};
+    glm::mat4 shipRotationMatrix{0};
 
     // Main loop
     while (!window.shouldClose())
@@ -226,6 +229,20 @@ int main()
             asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
             asteroidDrawer.draw(context);
         }
+
+        glm::mat4x4 shipTransform = glm::mat4(1.0f);
+
+        shipTransform = glm::translate(shipTransform, viewCamera.m_position - viewCamera.m_up);
+        shipTransform = glm::rotate(shipTransform, glm::half_pi<float>(), viewCamera.m_up);
+
+        glm::vec3 f = viewCamera.m_forward;
+        glm::vec3 u = viewCamera.m_up;
+        glm::vec3 r = viewCamera.m_right;
+        glm::mat4 rotation{ r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1 };
+        shipTransform *= rotation;
+        
+        spaceshipDrawer.transformation = shipTransform;
+        spaceshipDrawer.draw(context);
         
 
         // ImGui::ShowMetricsWindow();

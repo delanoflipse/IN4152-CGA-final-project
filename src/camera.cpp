@@ -28,44 +28,54 @@ void Camera::setUserInteraction(bool enabled)
 
 glm::vec3 Camera::cameraPos() const
 {
-    return m_position;
+    if (m_front_view)
+        return m_position + m_zoom * m_forward;
+    return m_position - m_zoom * m_forward;
 }
 
 glm::mat4 Camera::viewMatrix() const
 {
-    return glm::lookAt(m_position, m_position + m_forward, m_up);
+    if (m_front_view)
+        return glm::lookAt(m_position + m_zoom * m_forward, m_position + m_forward, m_up);
+    return glm::lookAt(m_position - m_zoom * m_forward, m_position + m_forward, m_up);
 }
 
 void Camera::rotateX(float angle)
 {
     const glm::vec3 horAxis = glm::cross(s_yAxis, m_forward);
-    m_position += 2.0f * m_forward;
+
+    //m_position += m_zoom * m_forward;
     m_forward = glm::normalize(glm::angleAxis(angle, horAxis) * m_forward);
-    m_position -= 2.0f * m_forward;
+    //m_position -= m_zoom * m_forward;
     m_up = glm::normalize(glm::cross(m_forward, horAxis));
+    m_right = glm::normalize(glm::cross(m_forward, m_up));
 }
 
 void Camera::rotateY(float angle)
 {
     const glm::vec3 horAxis = glm::cross(s_yAxis, m_forward);
 
-    m_position += 2.0f * m_forward;
+    //m_position += m_zoom * m_forward;
     m_forward = glm::normalize(glm::angleAxis(angle, s_yAxis) * m_forward);
-    m_position -= 2.0f * m_forward;
+    //m_position -= m_zoom * m_forward;
     m_up = glm::normalize(glm::cross(m_forward, horAxis));
+    m_right = glm::normalize(glm::cross(m_forward, m_up));
 }
 
 void Camera::updateInput()
 {
     constexpr float moveSpeed = 0.0001f;
-    float moveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
+    float maxMoveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
     constexpr float lookSpeed = 0.0035f;
     glm::vec3 acceleration = glm::vec3(0.0f);
+    m_front_view = false;
 
     glm::vec3 localMoveDelta { 0 };
     const glm::vec3 right = glm::normalize(glm::cross(m_forward, m_up));
     if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE))
         m_pWindow->setMouseCapture(false);
+    if (m_pWindow->isKeyPressed(GLFW_KEY_TAB))
+        m_front_view = true;
     if (m_pWindow->isKeyPressed(GLFW_KEY_A))
         acceleration -= moveSpeed * right;
     if (m_pWindow->isKeyPressed(GLFW_KEY_D))
@@ -78,15 +88,23 @@ void Camera::updateInput()
         acceleration += moveSpeed * m_up;
     if (m_pWindow->isKeyPressed(GLFW_KEY_F))
         acceleration -= moveSpeed * m_up;
+    if (m_pWindow->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
+        m_zoom -= 0.05f;
+    else
+        m_zoom += 0.05f;
+
+    m_zoom = glm::clamp(m_zoom, 5.0f, 10.0f);
 
     const glm::dvec2 cursorPos = m_pWindow->getCursorPos();
     const glm::vec2 delta = lookSpeed * glm::vec2(cursorPos - m_prevCursorPos);
     m_prevCursorPos = cursorPos;
 
+    
     if (delta.x != 0.0f)
         rotateY(-delta.x);
     if (delta.y != 0.0f)
         rotateX(-delta.y);
+    
 
     glm::vec3 drag = glm::vec3(glm::sign(m_velocity.x) * (moveSpeed/2), glm::sign(m_velocity.y) * (moveSpeed/2), glm::sign(m_velocity.z) * (moveSpeed/2));
     
