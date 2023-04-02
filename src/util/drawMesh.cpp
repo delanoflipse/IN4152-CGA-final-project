@@ -77,7 +77,7 @@ public:
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(workingMesh->triangles.size()) * 3, GL_UNSIGNED_INT, nullptr);
   }
   
-  void draw(materials::MaterialContext context)
+  void draw(materials::MaterialContext * context)
   {
     material->activate(context, &transformation);
     renderTriangles();

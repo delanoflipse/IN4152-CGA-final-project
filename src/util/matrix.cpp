@@ -3,6 +3,7 @@
 
 namespace math {
   glm::mat3 asNormalTransform(glm::mat4 transform) {
-    return glm::transpose(glm::inverse(glm::mat3(transform)));
+    glm::mat3 asMat3 = glm::mat3(transform);
+    return glm::transpose(glm::inverse(asMat3));
   }
 }
