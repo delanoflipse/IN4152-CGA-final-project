@@ -18,7 +18,7 @@ namespace materials
   class Material
   {
   public:
-    virtual void activate(MaterialContext context, glm::mat4 * transformation) = 0;
+    virtual void activate(MaterialContext *context, glm::mat4 * transformation) = 0;
   };
 
 };

@@ -23,9 +23,11 @@ DISABLE_WARNINGS_POP()
 #include "shapes/shapes.cpp"
 #include "util/drawMesh.cpp"
 #include "util/texture2D.cpp"
+#include "util/clock.cpp"
 #include "lights/directionalLight.cpp"
 #include "lights/shadowMap.cpp"
 #include "entities/asteroid.cpp"
+#include "entities/AsteroidManager.cpp"
 #include "materials/genericMaterial.cpp"
 #include "shaders/shaders.cpp"
 
@@ -86,9 +88,14 @@ int main()
     materials::GenericMaterial asteroidMaterial;
     asteroidMaterial.toonTexture = &toonMap;
     asteroidMaterial.diffuseTexture = &rockTexture;
-    asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
     asteroidMaterial.shininess = 64;
-    asteroidMaterial.toonUsage = 0.0f;
+    // asteroidMaterial.toonUsage = 0.5f;
+
+    materials::GenericMaterial shipMaterial;
+    shipMaterial.toonTexture = &toonMap;
+    shipMaterial.diffuseTexture = &rockTexture;
+    shipMaterial.shininess = 64;
+    // asteroidMaterial.toonUsage = 0.5f;
 
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
@@ -119,25 +126,22 @@ int main()
     MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
-    MeshDrawer spaceshipDrawer(&spaceshipMesh, &asteroidMaterial);
+    MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
 
-    entities::Asteroid a1;
-    entities::Asteroid a2;
-    entities::Asteroid a3;
-    a1.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, 1));
-    a2.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, 4, 0));
-    a3.currentTransformation = glm::translate(glm::mat4(1.0f), glm::vec3(0.5, -4, 0));
+    entities::AsteroidManager asteroidManager;
 
-    // std::vector<MeshDrawer *> meshes{&earthDrawer};
-    // std::vector<entities::Asteroid *> asteroids{&a1};
-    std::vector<entities::Asteroid *> asteroids{&a1, &a2, &a3};
     glm::mat4 shipRotationMatrix{0};
+
+    timing::start();
 
     // Main loop
     while (!window.shouldClose())
     {
         window.updateInput();
         viewCamera.updateInput();
+        timing::update();
+
+        asteroidManager.update();
 
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();
@@ -162,10 +166,11 @@ int main()
             const glm::mat4 shadowMvp = dirLight->mvp;
             glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-            for (auto asteroid : asteroids) {
+            for (auto asteroid : asteroidManager.asteroids) {
                 asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
                 asteroidDrawer.shadow();
             }
+            spaceshipDrawer.shadow();
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
@@ -212,24 +217,22 @@ int main()
         // draw earth, moon and sun
         earthDrawer.transformation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
 
-        earthDrawer.draw(context);
+        earthDrawer.draw(&context);
 
         moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
-        moonDrawer.draw(context);
+        moonDrawer.draw(&context);
 
         sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
-        sunDrawer.draw(context);
+        sunDrawer.draw(&context);
 
         skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
-        skyboxDrawer.draw(context);
+        skyboxDrawer.draw(&context);
 
+        // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        for (auto asteroid : asteroids) {
-            asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
-            asteroidDrawer.draw(context);
-        }
 
+        // render ship
         glm::mat4x4 shipTransform = glm::mat4(1.0f);
 
         shipTransform = glm::translate(shipTransform, viewCamera.m_position - viewCamera.m_up);
@@ -242,8 +245,13 @@ int main()
         shipTransform *= rotation;
         
         spaceshipDrawer.transformation = shipTransform;
-        spaceshipDrawer.draw(context);
-        
+        spaceshipDrawer.draw(&context);
+
+        // render asteroids
+        for (auto asteroid : asteroidManager.asteroids) {
+            asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+            asteroidDrawer.draw(&context);
+        }
 
         // ImGui::ShowMetricsWindow();
         window.swapBuffers();
