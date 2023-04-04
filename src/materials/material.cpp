@@ -1,18 +1,22 @@
 #pragma once
 
 #include "../lights/shadowMap.cpp"
+#include "../util/constants.cpp"
 
 namespace materials
 {
   struct MaterialContext {
     glm::mat4 * mvp;
     glm::vec3 * cameraPosition;
-    int directionalLights;
+    int lightCount;
     // note: these are arrays
-    glm::vec3 * directionLightDirections;
-    glm::vec4 * directionLightColors;
-    glm::mat4 * directionLightMvps;
-    lights::ShadowMap ** directionLightShadows;
+    int lightTypes[MAX_LIGHTS];
+    int lightEnabled[MAX_LIGHTS];
+    glm::vec3 lightDirections[MAX_LIGHTS];
+    glm::vec3 lightPositions[MAX_LIGHTS];
+    glm::vec4 lightColors[MAX_LIGHTS];
+    glm::mat4 lightMvps[MAX_LIGHTS];
+    lights::ShadowMap * lightShadowMaps[MAX_LIGHTS];
   };
 
   class Material
