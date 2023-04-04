@@ -27,6 +27,8 @@ glm::vec3 randomDirection()
 
 namespace entities
 {
+  const float MIN_SCALE = 0.8f;
+  const float MAX_SCALE = 1.0f / MIN_SCALE;
   class Asteroid
   {
   public:
@@ -34,18 +36,17 @@ namespace entities
     glm::mat4 currentTransformation;
 
     float speed;
-    glm::vec3 spawnLocation;
-    glm::vec3 targetLocation;
+    glm::vec3 spawnDirection;
+    glm::vec3 targetDirection;
     float progress = 0.0f;
 
     Asteroid()
     {
-      float spawnRadius = 50.0f;
       speed = randomRange(0.075, 0.125);
 
-      float scaleX = randomRange(0.75, 1.25);
-      float scaleY = randomRange(0.75, 1.25);
-      float scaleZ = randomRange(0.75, 1.25);
+      float scaleX = randomRange(MIN_SCALE, MAX_SCALE);
+      float scaleY = randomRange(MIN_SCALE, MAX_SCALE);
+      float scaleZ = randomRange(MIN_SCALE, MAX_SCALE);
 
       float pi2 = 2 * glm::pi<float>();
       glm::vec3 rotAxis = randomDirection();
@@ -56,17 +57,22 @@ namespace entities
       baseTransformation *= glm::rotate(glm::mat4(1.0f), rotation, rotAxis);
       baseTransformation *= glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, scaleZ));
 
-      glm::vec3 spawnDirection = randomDirection();
-      spawnDirection.z = glm::abs(spawnDirection.z); // hemisphere
-      spawnLocation = spawnRadius * spawnDirection;
-      targetLocation = glm::vec3(0, 0, -100.f);
+      spawnDirection = randomDirection();
+      targetDirection = randomDirection();
       update();
     }
 
     void update()
     {
-      glm::vec3 direction = targetLocation - spawnLocation;
-      glm::vec3 position = math::quadraticBezier(spawnLocation, glm::vec3(0), targetLocation, progress);
+      float spawnRadius = 50.0f;
+      // glm::vec3 direction = targetLocation - spawnLocation;
+      glm::vec3 position = math::cubicBezier(
+        spawnDirection * spawnRadius,
+        spawnDirection * spawnRadius * 0.15f,
+        targetDirection * spawnRadius * 0.15f,
+        targetDirection * spawnRadius,
+        progress
+      );
       currentTransformation = glm::translate(glm::mat4(1.0f), position);
     }
   };
