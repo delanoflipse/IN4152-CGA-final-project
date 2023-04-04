@@ -11,7 +11,7 @@ namespace entities
   {
   public:
     std::vector<entities::Asteroid *> asteroids;
-    int targetAsteroids = 3;
+    int targetAsteroids = 5;
     float nextSpawn = INFINITY;
     float minTime = 1;
     float maxTime = 5;
