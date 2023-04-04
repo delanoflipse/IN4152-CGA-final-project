@@ -107,16 +107,10 @@ int main()
 
     materials::GenericMaterial shipMaterial;
     shipMaterial.toonTexture = &toonMap;
-    shipMaterial.diffuseTexture = &rockTexture;
-    shipMaterial.shininess = 64;
+    shipMaterial.diffuseTexture = &spaceshipTexture;
+    shipMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
+    shipMaterial.shininess = 256;
     shipMaterial.toonUsage = 0.0f;
-
-    materials::GenericMaterial spaceshipMaterial;
-    spaceshipMaterial.toonTexture = &toonMap;
-    spaceshipMaterial.diffuseTexture = &spaceshipTexture;
-    spaceshipMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
-    spaceshipMaterial.shininess = 256;
-    spaceshipMaterial.toonUsage = 0.0f;
 
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
