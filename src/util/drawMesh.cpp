@@ -32,6 +32,7 @@ public:
   const Mesh *workingMesh;
   materials::Material *material;
   glm::mat4 transformation = glm::mat4(1.0f);
+  bool castShadow = true;
 
   MeshDrawer(const Mesh *mesh, materials::Material * mat)
   {
@@ -77,7 +78,7 @@ public:
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(workingMesh->triangles.size()) * 3, GL_UNSIGNED_INT, nullptr);
   }
   
-  void draw(materials::MaterialContext context)
+  void draw(materials::MaterialContext * context)
   {
     material->activate(context, &transformation);
     renderTriangles();

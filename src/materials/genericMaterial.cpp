@@ -18,6 +18,7 @@ namespace materials
     glm::vec3 ambientColor = glm::vec3(0.0f);
     glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
     float shininess = 1.0f;
+    float ambient = 0.01f;
     float toonUsage = 0.0f;
 
     bool useShadows = true;
@@ -32,35 +33,40 @@ namespace materials
     {
     }
 
-    void activate(MaterialContext context, glm::mat4 *transformation)
+    void activate(MaterialContext *context, glm::mat4 *transformation)
     {
       // Bind the shader
       shaders::generic.shader.bind();
 
       // set context bindings
-      glUniformMatrix4fv(shaders::generic.vars["mvp"], 1, GL_FALSE, glm::value_ptr(*context.mvp));
+      glUniformMatrix4fv(shaders::generic.vars["mvp"], 1, GL_FALSE, glm::value_ptr(*context->mvp));
       glUniformMatrix4fv(shaders::generic.vars["transformation"], 1, GL_FALSE, glm::value_ptr(*transformation));
-      glUniform3fv(shaders::generic.vars["cameraPosition"], 1, glm::value_ptr(*context.cameraPosition));
+      glUniform3fv(shaders::generic.vars["cameraPosition"], 1, glm::value_ptr(*context->cameraPosition));
 
       // https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/geometry/transforming-normals.html
       glm::mat3 normalTransformation = math::asNormalTransform(*transformation);
       glUniformMatrix3fv(shaders::generic.vars["normalTransformation"], 1, GL_FALSE, glm::value_ptr(normalTransformation));
 
-      
-      glUniform1i(shaders::generic.vars["directionalLights"], context.directionalLights);
-      glUniform3fv(shaders::generic.vars["directionalLightDirections"], 2, glm::value_ptr(context.directionLightDirections[0]));
-      glUniform4fv(shaders::generic.vars["directionalLightColors"], 2, glm::value_ptr(context.directionLightColors[0]));
+      // === Lights ===
+      glUniform1i(shaders::generic.vars["lightCount"], context->lightCount);
+      glUniform1iv(shaders::generic.vars["lightTypes"], MAX_LIGHTS, context->lightTypes);
+      glUniform1iv(shaders::generic.vars["lightEnabled"], MAX_LIGHTS, context->lightEnabled);
+      glUniform3fv(shaders::generic.vars["lightDirections"], MAX_LIGHTS, glm::value_ptr(context->lightDirections[0]));
+      glUniform3fv(shaders::generic.vars["lightPosition"], MAX_LIGHTS, glm::value_ptr(context->lightPositions[0]));
+      glUniform4fv(shaders::generic.vars["lightColors"], MAX_LIGHTS, glm::value_ptr(context->lightColors[0]));
 
-      int uniformShadowMap = shaders::generic.vars["directionalLightShadowMaps"];
-      for (int i = 0; i < context.directionalLights; i++) {
-        context.directionLightShadows[i]->bindUniform(uniformShadowMap + i);
-      glUniformMatrix4fv(shaders::generic.vars["directionalLightMVPs"] + i, 1, GL_FALSE, glm::value_ptr(context.directionLightMvps[i]));
+      int uniformShadowMap = shaders::generic.vars["lightShadowMaps"];
+      for (int i = 0; i < context->lightCount; i++)
+      {
+        context->lightShadowMaps[i]->bindUniform(uniformShadowMap + i);
+        glUniformMatrix4fv(shaders::generic.vars["lightMVPs"] + i, 1, GL_FALSE, glm::value_ptr(context->lightMvps[i]));
       }
 
       // set material values
       glUniform3fv(shaders::generic.vars["diffuseColor"], 1, glm::value_ptr(diffuseColor));
       glUniform3fv(shaders::generic.vars["specularColor"], 1, glm::value_ptr(specularColor));
       glUniform1f(shaders::generic.vars["shininess"], shininess);
+      glUniform1f(shaders::generic.vars["ambient"], ambient);
 
       glUniform1i(shaders::generic.vars["useShadows"], useShadows ? 1 : 0);
       glUniform1i(shaders::generic.vars["useLights"], useLights ? 1 : 0);

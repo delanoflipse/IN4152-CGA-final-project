@@ -14,6 +14,7 @@ public:
     Camera(Window* pWindow, const glm::vec3& position, const glm::vec3& forward);
 
     void updateInput();
+    void initialInput();
     void setUserInteraction(bool enabled);
 
     glm::vec3 cameraPos() const;
@@ -21,7 +22,7 @@ public:
 
     bool m_front_view = false;
     float m_zoom = 10.0f;
-    glm::vec3 m_position{ 0, 0, 5.0f };
+    glm::vec3 m_position{ 0, 0, 0.0f };
     glm::vec3 m_forward{ 0, 0, -1 };
     glm::vec3 m_up{ 0, 1, 0 };
     glm::vec3 m_right{ 1, 0, 0 };
