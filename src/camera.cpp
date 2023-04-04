@@ -34,7 +34,7 @@ glm::vec3 Camera::cameraPos() const
 glm::mat4 Camera::viewMatrix() const
 {
     if (m_front_view)
-        return glm::lookAt(m_position + m_zoom * m_forward, m_position + m_forward, m_up);
+        return glm::lookAt(m_position + m_zoom * m_forward, m_position - m_forward, m_up);
     return glm::lookAt(m_position - m_zoom * m_forward, m_position + m_forward, m_up);
 }
 
