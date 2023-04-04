@@ -30,14 +30,20 @@ namespace shaders
                         .build();
 
     saveShaderVar(&generic, "cameraPosition");
-    saveShaderVar(&generic, "directionalLights");
-    saveShaderVar(&generic, "directionalLightDirections");
-    saveShaderVar(&generic, "directionalLightColors");
-    saveShaderVar(&generic, "directionalLightMVPs");
-    saveShaderVar(&generic, "directionalLightShadowMaps");
+
     saveShaderVar(&generic, "diffuseColor");
     saveShaderVar(&generic, "specularColor");
     saveShaderVar(&generic, "shininess");
+    saveShaderVar(&generic, "ambient");
+
+    saveShaderVar(&generic, "lightCount");
+    saveShaderVar(&generic, "lightTypes");
+    saveShaderVar(&generic, "lightDirections");
+    saveShaderVar(&generic, "lightPosition");
+    saveShaderVar(&generic, "lightColors");
+    saveShaderVar(&generic, "lightEnabled");
+    saveShaderVar(&generic, "lightMVPs");
+    saveShaderVar(&generic, "lightShadowMaps");
     
     saveShaderVar(&generic, "useDiffuseTexture");
     saveShaderVar(&generic, "diffuseTexture");

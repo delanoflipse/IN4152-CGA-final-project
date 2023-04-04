@@ -32,6 +32,7 @@ public:
   const Mesh *workingMesh;
   materials::Material *material;
   glm::mat4 transformation = glm::mat4(1.0f);
+  bool castShadow = true;
 
   MeshDrawer(const Mesh *mesh, materials::Material * mat)
   {

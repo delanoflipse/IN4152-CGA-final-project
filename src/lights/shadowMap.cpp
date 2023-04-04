@@ -14,7 +14,7 @@ namespace lights
     GLuint shadowMapTexture;
     GLuint framebuffer;
 
-    ShadowMap(int res = 2048)
+    ShadowMap(int res = 1024)
     {
       resolution = res;
       textureUnit = util::getTextureUnitId();

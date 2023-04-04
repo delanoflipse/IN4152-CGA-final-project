@@ -60,9 +60,15 @@ void Camera::rotateY(float angle)
     m_right = glm::normalize(glm::cross(m_forward, m_up));
 }
 
+void Camera::initialInput()
+{
+    const glm::dvec2 cursorPos = m_pWindow->getCursorPos();
+    m_prevCursorPos = cursorPos;
+}
+
 void Camera::updateInput()
 {
-    constexpr float moveSpeed = 0.0001f;
+    constexpr float moveSpeed = 0.001f;
     float maxMoveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
     constexpr float lookSpeed = 0.0035f;
     glm::vec3 acceleration = glm::vec3(0.0f);
