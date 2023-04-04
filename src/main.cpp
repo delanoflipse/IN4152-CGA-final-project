@@ -70,6 +70,8 @@ int main()
     util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
+    util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
@@ -89,6 +91,13 @@ int main()
     asteroidMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
     asteroidMaterial.shininess = 64;
     asteroidMaterial.toonUsage = 0.0f;
+
+    materials::GenericMaterial spaceshipMaterial;
+    spaceshipMaterial.toonTexture = &toonMap;
+    spaceshipMaterial.diffuseTexture = &spaceshipTexture;
+    spaceshipMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
+    spaceshipMaterial.shininess = 256;
+    spaceshipMaterial.toonUsage = 0.0f;
 
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
@@ -119,7 +128,7 @@ int main()
     MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
-    MeshDrawer spaceshipDrawer(&spaceshipMesh, &asteroidMaterial);
+    MeshDrawer spaceshipDrawer(&spaceshipMesh, &spaceshipMaterial);
 
     entities::Asteroid a1;
     entities::Asteroid a2;
