@@ -12,7 +12,6 @@ in vData
   vec3 position;
   vec3 normal;
   vec2 uv;
-  mat4 model;
 } vertex[];
 
 out fData

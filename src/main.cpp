@@ -124,6 +124,12 @@ int main()
     Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/models/spaceship.obj"));
     Mesh platformMesh = mergeMeshes(loadMesh("resources/models/platform.obj"));
     Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
+    Mesh spaceshipAnimation[200];
+    
+    for (int i = 0; i < 200; i++) {
+        spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i+1) + ".obj"));
+    }
+  
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -177,25 +183,29 @@ int main()
 
     MeshDrawer asteroidDrawer(&asteroidMesh, &asteroidMaterial);
     MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
-    MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
     platformDrawer.transformation = glm::scale(
         glm::translate(
             glm::mat4(1.0f),
             glm::vec3(0.0f, -2.0f, 0.0f)),
         glm::vec3(platformScale));
+  
+    std::vector<MeshDrawer *> spaceshipAnimationDrawers{};
+
+    for (int i = 0; i < 200; i++) {
+        MeshDrawer *tempSpaceshipDrawer = new MeshDrawer(&spaceshipAnimation[i], &shipMaterial);
+        spaceshipAnimationDrawers.push_back(tempSpaceshipDrawer);
+    }
 
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
 
     entities::AsteroidManager asteroidManager;
-
-    std::vector meshes{&spaceshipDrawer, &platformDrawer};
-
-    glm::mat4 shipRotationMatrix{0};
+    std::vector meshes { spaceshipAnimationDrawers[0], &platformDrawer};
 
     window.setMouseCapture(true);
     viewCamera.initialInput();
     timing::start();
+    int updateFrame = 0, animationFrame = 0;
 
     // Main loop
     while (!window.shouldClose())
@@ -226,6 +236,11 @@ int main()
         glm::vec4 rotated = rotationMat * baseDirection;
         glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
         sunlight.direction = normalRotated;
+
+        if (updateFrame++ % 10 == 0) {
+            meshes[0] = spaceshipAnimationDrawers[animationFrame++];
+            animationFrame = animationFrame % 200;
+        }
 
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();
@@ -369,8 +384,8 @@ int main()
         glm::vec3 r = viewCamera.m_right;
         glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
         shipTransform *= rotation;
-
-        spaceshipDrawer.transformation = shipTransform;
+      
+        meshes[0]->transformation = shipTransform;
 
         // render asteroids
         for (auto asteroid : asteroidManager.asteroids)
