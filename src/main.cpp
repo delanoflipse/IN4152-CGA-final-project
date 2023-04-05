@@ -100,23 +100,23 @@ int main()
     shaders::loadShaders();
 
     // === Load textures ===
-    util::Textured2D rockTexture("resources/textures/rocks.jpg");
+    util::Textured2D rockTexture("resources/textures/rocks.jpg", true);
     // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
-    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
-    util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
-    util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg", true);
+    util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg", true);
+    util::Textured2D moonTexture("resources/textures/2k_moon.jpg", true);
     util::Textured2D earthNormalTexture("resources/textures/2k_earth_normal_map.png");
-    util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map.jpg");
+    util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map_2.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
-    util::Textured2D spaceshipTexture("resources/textures/gold.jpg");
+    util::Textured2D spaceshipTexture("resources/textures/gold.jpg", true);
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
-    util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
+    util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg", true);
     util::Textured2D toonMap("resources/textures/toon_map.png");
 
     util::Textured2D metalNormalMap("resources/textures/metal_norm.jpg");
     util::Textured2D metalSpecularMap("resources/textures/metal_spec.jpg");
-    util::Textured2D metalDiffuseMap("resources/textures/metal_tex.jpg");
+    util::Textured2D metalDiffuseMap("resources/textures/metal_tex.jpg", true);
 
     // === Load meshes  ===
     Mesh asteroidMesh = mergeMeshes(loadMesh("resources/models/asteroid.obj"));
@@ -150,12 +150,14 @@ int main()
     earthMaterial.shadowTexture = &earthNightTexture;
     earthMaterial.normalTexture = &earthNormalTexture;
     earthMaterial.specularTexture = &earthSpecularTexture;
-    earthMaterial.shininess = 32;
+    earthMaterial.shininess = 8.f;
     earthMaterial.useShadows = false;
 
     materials::GenericMaterial moonMaterial;
+    moonMaterial.shininess = 2.0f;
+    moonMaterial.ambient = 0.0f;
+    moonMaterial.specularTexture = &moonTexture;
     moonMaterial.diffuseTexture = &moonTexture;
-    moonMaterial.shininess = 0;
     moonMaterial.useShadows = false;
 
     materials::GenericMaterial sunMaterial;
@@ -229,9 +231,9 @@ int main()
             gamestate::hits++;
         }
 
-        // float sunRotation = timing::time_s * 2.0f;
+        // float sunRotation = timing::time_s * 0.05f;
         float sunRotation = 0.0f;
-        glm::mat4 rotationMat = glm::rotate(glm::mat4(1.0f), glm::radians(sunRotation), glm::vec3(0.0, 0.0, 1.0));
+        glm::mat4 rotationMat = glm::rotate(glm::mat4(1.0f), sunRotation, glm::vec3(0.0, 0.0, 1.0));
         glm::vec4 baseDirection = glm::vec4(-1.f, 0.2f, 0.f, 1.0);
         glm::vec4 rotated = rotationMat * baseDirection;
         glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
@@ -347,7 +349,6 @@ int main()
         }
 
         // draw earth, moon and sun
-        
         float earthRotation = timing::time_s * 0.2f;
         glm::mat4 earthTranslation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
         glm::mat4 earthScaled = glm::scale(earthTranslation, glm::vec3(2.0f));

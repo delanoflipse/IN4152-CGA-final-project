@@ -2,6 +2,7 @@
 
 #include "../util/clock.cpp"
 #include "../util/vector.cpp"
+#include "../util/random.cpp"
 #include "../gamestate.cpp"
 
 namespace entities
@@ -11,7 +12,7 @@ namespace entities
   public:
     std::vector<entities::Asteroid *> asteroids;
     int targetAsteroids = 8;
-    float nextSpawn = INFINITY;
+    float nextSpawn = 0;
     float minTime = 1;
     float maxTime = 5;
 
@@ -22,7 +23,13 @@ namespace entities
         return;
       }
 
+      if (timing::time_s < nextSpawn)
+      {
+        return;
+      }
+
       asteroids.push_back(new Asteroid(centerpos));
+      nextSpawn = timing::time_s + random::randomRange(0.01f, 0.25f);
     }
 
     void updateLocations()

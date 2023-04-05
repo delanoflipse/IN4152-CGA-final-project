@@ -6,23 +6,13 @@
 
 #include "../util/bezier.cpp"
 #include "../util/easing.cpp"
-
-// https://www.geeksforgeeks.org/generate-a-random-float-number-in-cpp/
-float randomFloat()
-{
-  return float(rand()) / float(RAND_MAX);
-}
-
-float randomRange(float start, float end)
-{
-  return start + randomFloat() * (end - start);
-}
+#include "../util/random.cpp"
 
 glm::vec3 randomDirection()
 {
-  float rx = randomRange(-1.0, 1.0) + 0.00000000001f; // prevent divide by zero
-  float ry = randomRange(-1.0, 1.0);
-  float rz = randomRange(-1.0, 1.0);
+  float rx = random::randomRange(-1.0, 1.0) + 0.00000000001f; // prevent divide by zero
+  float ry = random::randomRange(-1.0, 1.0);
+  float rz = random::randomRange(-1.0, 1.0);
   return glm::normalize(glm::vec3(rx, ry, rz));
 }
 
@@ -48,16 +38,16 @@ namespace entities
     Asteroid(glm::vec3 centerpos)
     {
       centerPosition = centerpos;
-      speed = randomRange(0.075, 0.1);
-      isEasterEgg = randomFloat() > 0.95;
+      speed = random::randomRange(0.075, 0.1);
+      isEasterEgg = random::randomFloat() > 0.95;
 
-      float scaleX = randomRange(MIN_SCALE, MAX_SCALE);
-      float scaleY = randomRange(MIN_SCALE, MAX_SCALE);
-      float scaleZ = randomRange(MIN_SCALE, MAX_SCALE);
+      float scaleX = random::randomRange(MIN_SCALE, MAX_SCALE);
+      float scaleY = random::randomRange(MIN_SCALE, MAX_SCALE);
+      float scaleZ = random::randomRange(MIN_SCALE, MAX_SCALE);
 
       float pi2 = 2 * glm::pi<float>();
       glm::vec3 rotAxis = randomDirection();
-      float rotation = randomRange(0, pi2);
+      float rotation = random::randomRange(0, pi2);
 
       glm::mat4 model = glm::mat4(1.0f);
       baseTransformation = glm::mat4(1.0f);

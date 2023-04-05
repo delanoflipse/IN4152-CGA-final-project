@@ -18,7 +18,7 @@ namespace materials
     glm::vec3 ambientColor = glm::vec3(0.0f);
     glm::vec3 specularColor = glm::vec3(1.0f, 1.0f, 1.0f);
     float shininess = 1.0f;
-    float ambient = 0.01f;
+    float ambient = 0.005f;
     float toonUsage = 0.0f;
 
     bool useShadows = true;
