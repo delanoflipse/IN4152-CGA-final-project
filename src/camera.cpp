@@ -80,6 +80,7 @@ void Camera::updateInput()
     m_front_view = m_pWindow->isKeyPressed(GLFW_KEY_TAB);
 
     glm::vec3 localMoveDelta{0};
+    
     const glm::vec3 right = glm::normalize(glm::cross(m_forward, m_up));
     if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE))
         m_pWindow->setMouseCapture(false);
