@@ -12,6 +12,7 @@ DISABLE_WARNINGS_PUSH()
 DISABLE_WARNINGS_POP()
 
 #include "util/clock.cpp"
+#include "gamestate.cpp"
 
 Camera::Camera(Window *pWindow)
     : Camera(pWindow, glm::vec3(0), glm::vec3(0, 0, -1))
@@ -80,8 +81,8 @@ void Camera::reset()
 
 void Camera::updateInput()
 {
-    float directionalAcceleration = 0.1f * timing::delta_s;
-    float maxMoveSpeed = 0.15f;
+    float directionalAcceleration = (0.1f + 0.1f * gamestate::powerUp) * timing::delta_s;
+    float maxMoveSpeed = 0.15f + 0.2f * gamestate::powerUp;
     float lookSpeed = 0.0035f;
 
     glm::vec3 acceleration = glm::vec3(0.0f);
@@ -90,42 +91,59 @@ void Camera::updateInput()
     glm::vec3 localMoveDelta{0};
 
     const glm::vec3 right = glm::normalize(glm::cross(m_forward, m_up));
-    if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE))
+    if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE)){
         m_pWindow->setMouseCapture(false);
-    if (m_pWindow->isKeyPressed(GLFW_KEY_A))
-        acceleration -= directionalAcceleration * right;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_D))
-        acceleration += directionalAcceleration * right;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_W))
-        acceleration += directionalAcceleration * m_forward;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_S))
-        acceleration -= directionalAcceleration * m_forward;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_R) || m_pWindow->isKeyPressed(GLFW_KEY_SPACE))
-        acceleration += directionalAcceleration * m_up;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_F) || m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT))
-        acceleration -= directionalAcceleration * m_up;
-    if (m_pWindow->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
-        m_zoom -= 0.05f;
-    else
-        m_zoom += 0.05f;
+        mouse_captured = false;
+        gamestate::paused = true;
+    }
+
+    if (m_pWindow->isKeyPressed(GLFW_KEY_P)) {
+        m_pWindow->setMouseCapture(true);
+        mouse_captured = true;
+        gamestate::paused = false;
+        initialInput();
+    }
 
     m_zoom = glm::clamp(m_zoom, 5.0f, 10.0f);
 
-    const glm::dvec2 cursorPos = m_pWindow->getCursorPos();
-    const glm::vec2 delta = lookSpeed * glm::vec2(cursorPos - m_prevCursorPos);
-    m_prevCursorPos = cursorPos;
+    if (mouse_captured)
+    {
+        const glm::dvec2 cursorPos = m_pWindow->getCursorPos();
+        const glm::vec2 delta = lookSpeed * glm::vec2(cursorPos - m_prevCursorPos);
+        m_prevCursorPos = cursorPos;
 
-    if (delta.x != 0.0f)
-        rotateY(-delta.x);
-    if (delta.y != 0.0f)
-        rotateX(-delta.y);
+        if (delta.x != 0.0f)
+            rotateY(-delta.x);
+        if (delta.y != 0.0f)
+            rotateX(-delta.y);
+    }
 
-    glm::vec3 drag = glm::vec3(glm::sign(m_velocity.x) * (directionalAcceleration / 2), glm::sign(m_velocity.y) * (directionalAcceleration / 2), glm::sign(m_velocity.z) * (directionalAcceleration / 2));
+    if (!gamestate::paused)
+    {
+        if (m_pWindow->isKeyPressed(GLFW_KEY_A))
+            acceleration -= directionalAcceleration * right;
+        if (m_pWindow->isKeyPressed(GLFW_KEY_D))
+            acceleration += directionalAcceleration * right;
+        if (m_pWindow->isKeyPressed(GLFW_KEY_W))
+            acceleration += directionalAcceleration * m_forward;
+        if (m_pWindow->isKeyPressed(GLFW_KEY_S))
+            acceleration -= directionalAcceleration * m_forward;
+        if (m_pWindow->isKeyPressed(GLFW_KEY_SPACE))
+            acceleration += directionalAcceleration * m_up;
+        if (m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT))
+            acceleration -= directionalAcceleration * m_up;
+        if (m_pWindow->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
+            m_zoom -= 0.05f;
+        else
+            m_zoom += 0.05f;
 
-    m_velocity += acceleration - m_velocity * 0.01f;
-    if (glm::length(m_velocity) > 3 * maxMoveSpeed)
-        m_velocity = (m_velocity / maxMoveSpeed) * 3.0f;
+        glm::vec3 drag = glm::vec3(glm::sign(m_velocity.x) * (directionalAcceleration / 2), glm::sign(m_velocity.y) * (directionalAcceleration / 2), glm::sign(m_velocity.z) * (directionalAcceleration / 2));
 
-    m_position += m_velocity;
+        m_velocity += acceleration - m_velocity * 0.01f;
+        if (glm::length(m_velocity) > 3 * maxMoveSpeed)
+            m_velocity = (m_velocity / maxMoveSpeed) * 3.0f;
+
+        m_position += m_velocity;
+    }
     // std::cout << glm::to_string(acceleration) << glm::to_string(m_velocity) << "\n";
 }
