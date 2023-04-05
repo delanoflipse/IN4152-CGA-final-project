@@ -29,7 +29,7 @@ namespace entities
       }
 
       asteroids.push_back(new Asteroid(centerpos));
-      nextSpawn = timing::time_s + random::randomRange(0.01f, 0.25f);
+      nextSpawn = timing::time_s + random::randomRange(0.4f, 1.5f);
     }
 
     void updateLocations()
