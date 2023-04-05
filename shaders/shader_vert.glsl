@@ -11,22 +11,22 @@ layout(location = 1) in vec3 normal; // World-space normal
 layout(location = 2) in vec2 uv; // World-space normal
 
 // Data to pass to fragment shader
-out vec3 origFragPos;
-out vec3 fragPos;
-out vec3 fragNormal;
-out vec2 fragUv;
+
+out vData
+{
+    vec3 position;
+    vec3 normal;
+    vec2 uv;
+} vertex;
 
 void main() {
-    vec4 realPos = transformation * vec4(pos, 1.0);
-    vec3 realNormal = normalTransformation * normal;
-	// Transform 3D position into on-screen position
-    gl_Position = mvp * realPos;
+    vec4 transformedPosition = transformation * vec4(pos, 1.0);
+    vec3 transformedNormal = normalTransformation * normal;
+    
+    vertex.position = transformedPosition.xyz / transformedPosition.w;
+    vertex.normal = normalize(transformedNormal);
+    vertex.uv = uv;
 
-    // Pass position and normal through to fragment shader
-    origFragPos = pos;
-    fragPos = realPos.xyz / realPos.w;
-    // fragNormal = normalize(realNormal.xyz / realNormal.w);
-    // fragNormal = normal;
-    fragNormal = normalize(realNormal);
-    fragUv = uv;
+	// Transform 3D position into on-screen position
+    gl_Position = mvp * transformedPosition;
 }

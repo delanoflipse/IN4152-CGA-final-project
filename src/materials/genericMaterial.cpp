@@ -25,6 +25,7 @@ namespace materials
     bool useLights = true;
 
     util::Textured2D *overlayTexture = NULL;
+    util::Textured2D *normalTexture = NULL;
     util::Textured2D *diffuseTexture = NULL;
     util::Textured2D *shadowTexture = NULL;
     util::Textured2D *toonTexture = NULL;
@@ -108,6 +109,16 @@ namespace materials
       else
       {
         glUniform1f(shaders::generic.vars["toonUsage"], 0.0f);
+      }
+
+      if (normalTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useNormalTexture"], 1);
+        normalTexture->bindUniform(shaders::generic.vars["normalTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useNormalTexture"], 0);
       }
     }
   };

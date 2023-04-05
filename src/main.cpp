@@ -46,7 +46,6 @@ const std::string WINDOW_TITLE = "Group 8";
 int main()
 {
     Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
-    window.setMouseCapture(true);
 
     // Key handle function
     window.registerKeyCallback([&](
@@ -61,7 +60,6 @@ int main()
         } });
 
     Camera viewCamera{&window, glm::vec3(0.f, .0f, .0f), glm::vec3(0.0f, 0.0f, -1.0f)};
-    viewCamera.initialInput();
 
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
     std::vector directionalLights = {&sunlight};
@@ -86,6 +84,7 @@ int main()
     util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    util::Textured2D earthNormalTexture("resources/textures/2k_earth_normal_map.png");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
     util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
@@ -119,6 +118,7 @@ int main()
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
     earthMaterial.shadowTexture = &earthNightTexture;
+    earthMaterial.normalTexture = &earthNormalTexture;
     earthMaterial.shininess = 0;
     earthMaterial.useShadows = false;
 
@@ -162,6 +162,8 @@ int main()
 
     glm::mat4 shipRotationMatrix{0};
 
+    viewCamera.initialInput();
+    window.setMouseCapture(true);
     timing::start();
 
     // Main loop
@@ -172,6 +174,13 @@ int main()
         timing::update();
 
         asteroidManager.update();
+
+        float sunRotation = timing::time_s * 2.0f;
+        glm::mat4 rotationMat = glm::rotate(glm::mat4(1.0f), glm::radians(sunRotation), glm::vec3(0.0, 0.0, 1.0));
+        glm::vec4 baseDirection = glm::vec4(-1.f, 0.2f, 0.f, 1.0);
+        glm::vec4 rotated = rotationMat * baseDirection;
+        glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
+        sunlight.direction = normalRotated;
 
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();

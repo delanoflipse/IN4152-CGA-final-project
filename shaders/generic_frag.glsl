@@ -2,6 +2,7 @@
 
 #define MAX_LIGHTS 8
 #define LIGHT_SAMPLES 1
+#define DEBUG_NORMAL
 #define DEBUG_SHADOW_MAP
 #define PIXEL_SIZE 1 / 1024
 
@@ -44,30 +45,34 @@ uniform sampler2D overlayTexture;
 uniform float toonUsage;
 uniform sampler2D toonTexture;
 
+uniform int useNormalTexture;
+uniform sampler2D normalTexture;
 
 //  ---- INPUT/OUTPUT ----
 // Output for on-screen color
 layout(location = 0) out vec4 outColor;
 
-// Interpolated output data from vertex shader
-in vec3 origFragPos; // World-space position
-in vec3 fragPos; // World-space position
-in vec3 fragNormal; // World-space normal
-in vec2 fragUv; // World-space normal
-
-
-float getDiffuse(vec3 lightDirection)
+// Interpolated input data
+in fData
 {
-  return max(0, dot(lightDirection, fragNormal));
+  vec3 position;
+  vec3 normal;
+  vec2 uv;
+  mat3 TBN;
+} fragment;
+
+float getDiffuse(vec3 lightDirection, vec3 normal)
+{
+  return max(0, dot(lightDirection, normal));
 }
 
-float getSpecular(vec3 lightDirection, vec3 cameraDirection)
+float getSpecular(vec3 lightDirection, vec3 cameraDirection, vec3 normal)
 {
-  // vec3 lightReflected = -reflect(lightDirection, fragNormal);
+  // vec3 lightReflected = -reflect(lightDirection, normal);
   // float specularReflection = max(0, dot(lightReflected, cameraDirection));
 
   vec3 halfway = normalize(lightDirection + cameraDirection);
-  float specularReflection = max(0, dot(halfway, fragNormal));
+  float specularReflection = max(0, dot(halfway, normal));
 
   float specularIntensity = shininess > 0 ? pow(specularReflection, shininess) : 0;
   return specularIntensity;
@@ -75,24 +80,26 @@ float getSpecular(vec3 lightDirection, vec3 cameraDirection)
 
 void main()
 {
-  vec3 toCamera = cameraPosition - fragPos;
+
+  vec3 toCamera = cameraPosition - fragment.position;
   vec3 cameraDirection = normalize(toCamera);
   // TODO: optional?
   // disabled due to skybox non-inverted normals
-  // if (dot(cameraDirection, fragNormal) < 0) {
+  // if (dot(cameraDirection, fragment.normal) < 0) {
   //   discard;
   // }
 
   vec4 fragDiffuseColor = vec4(diffuseColor, 1);
   vec4 fragSpecularColor = vec4(specularColor, 1);
   vec4 fragShadowColor = vec4(vec3(0), 1);
+  vec3 usedNormal = fragment.normal;
 
   if (useDiffuseTexture == 1) {
-    fragDiffuseColor = texture(diffuseTexture, fragUv);
+    fragDiffuseColor = texture(diffuseTexture, fragment.uv);
   }
 
   if (useShadowTexture == 1) {
-    fragShadowColor = texture(shadowTexture, fragUv);
+    fragShadowColor = texture(shadowTexture, fragment.uv);
   }
 
   if (useLights == 0) {
@@ -100,8 +107,14 @@ void main()
     return;
   }
 
+  bool useNormalMapping = useNormalTexture == 1;
+  if (useNormalMapping) {
+    vec3 texNormal = normalize(texture(normalTexture, fragment.uv).xyz);
+    usedNormal = normalize(2 * texNormal - 1);
+  }
+
   vec4 colorSum = vec4(0);
-  vec4 fragPos4 = vec4(fragPos, 1.0);
+  vec4 pos4 = vec4(fragment.position, 1.0);
 
   int numberOfLights = min(MAX_LIGHTS, lightCount);
 
@@ -115,20 +128,27 @@ void main()
 
     // spotlight
     if (lightType == 1) {
-      lightDirection = normalize(lightPosition[i] - fragPos);
+      lightDirection = normalize(lightPosition[i] - fragment.position);
     }
 
     // base values
     vec4 lightColor = lightColors[i];
+
+    vec3 vLightDir = lightDirection;
+    vec3 vCamDir = cameraDirection;
+    if (useNormalMapping) {
+      vLightDir = fragment.TBN * vLightDir;
+      vCamDir = fragment.TBN * vCamDir;
+    }
     
-    float diffuse = getDiffuse(lightDirection);
-    float specular = getSpecular(lightDirection, cameraDirection);
+    float diffuse = getDiffuse(vLightDir, usedNormal);
+    float specular = getSpecular(vLightDir, vCamDir, usedNormal);
 
     float inShadow = 0;
 
     if (useShadows == 1) {
       // convert to shadow space
-      vec4 fragLightCoord = lightMVPs[i] *  fragPos4;
+      vec4 fragLightCoord = lightMVPs[i] *  pos4;
 
       // Divide by w because fragLightCoord are homogeneous coordinates
       vec3 asLightPosition = fragLightCoord.xyz / fragLightCoord.w;
@@ -145,9 +165,9 @@ void main()
         float bias = 0;
         if (lightType == 1) {
           // bias = 0.001;
-          // bias = max(0.00000025 * (1 - dot(fragNormal, lightDirection)), 0.0000005);
+          // bias = max(0.00000025 * (1 - dot(fragment.normal, lightDirection)), 0.0000005);
         } else {
-          bias = max(0.0025 * (1 - dot(fragNormal, lightDirection)), 0.005);
+          bias = max(0.0025 * (1 - dot(fragment.normal, lightDirection)), 0.005);
         }
 
         int samples = LIGHT_SAMPLES;
@@ -203,6 +223,13 @@ void main()
   }
 
   // Output the normal as color
+  // #ifdef DEBUG_NORMAL
+  // outColor = vec4(fragment.bitangent, 1);
+  // // outColor = vec4(fragment.normal, 1);
+  // // outColor = vec4(usedNormal, 1);
+  // return;
+  // #endif
+
   vec4 finalColor = colorSum;
   outColor = vec4(colorSum.xyz, 1);
 }
