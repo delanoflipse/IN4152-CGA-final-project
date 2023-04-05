@@ -143,7 +143,7 @@ void main()
     fragSpecularColor = texture(specularTexture, fragment.uv);
   }
 
-  vec4 colorSum = vec4(0);
+  vec4 colorSum = ambient * fragDiffuseColor;
   vec4 pos4 = vec4(fragment.position, 1.0);
 
   int numberOfLights = min(MAX_LIGHTS, lightCount);
@@ -271,7 +271,7 @@ void main()
     
 
     // TODO: now its x * ambient, which is incorrect
-    float lightness = max(ambient, diffuse * shadowFactor);
+    float lightness = max(0, diffuse * shadowFactor);
     float specularness = max(0, specular * shadowFactor);
 
     vec4 toonColor = vec4(0);
@@ -293,5 +293,9 @@ void main()
   #endif
 
   vec4 finalColor = colorSum;
+  // apply gamma correction
+  float gamma = 2.2;
+  finalColor.rgb = pow(finalColor.rgb, vec3(1.0/gamma));
+
   outColor = finalColor;
 }
