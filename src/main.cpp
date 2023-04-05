@@ -49,8 +49,21 @@ const int FRAMES = 200;
 const int SKIP_FRAMES = 8;
 const int ANIMATION_FPS = 30;
 const float ANIMATION_DURATION = 0.833f;
+const float SHOOT_COOLDOWN = 0.8f;
+
+const float powerUpTransitionSpeed = 1.25f;
+const float powerUpDuration = 5.0f;
 
 const std::string WINDOW_TITLE = "Group 8";
+
+template <typename T>
+std::string to_string_with_precision(const T a_value, const int n = 6)
+{
+    std::ostringstream out;
+    out.precision(n);
+    out << std::fixed << a_value;
+    return std::move(out).str();
+}
 
 int main()
 {
@@ -77,19 +90,19 @@ int main()
     float platformScale = 2.0f;
 
     lights::SpotLight platformSpotlight1(
-        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        glm::vec4(0.2f, 0.2f, 1.0f, 1.0f),
         platformScale * glm::vec3(-0.8575f, 0.9289f, 0.0f),
         glm::vec3(0.8575f, -0.9289f, 0.0f),
         glm::pi<float>() / 4.0f, 8.0f);
 
     lights::SpotLight platformSpotlight2(
-        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        glm::vec4(0.2f, 1.0f, 0.2f, 1.0f),
         platformScale * glm::vec3(0.4284f, 0.9289f, -0.7424f),
         glm::vec3(-0.4284f, -0.9289f, 0.7424f),
         glm::pi<float>() / 4.0f, 8.0f);
 
     lights::SpotLight platformSpotlight3(
-        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        glm::vec4(1.0f, 0.2f, 0.2f, 1.0f),
         platformScale * glm::vec3(0.4284f, 0.9289f, 0.7424f),
         glm::vec3(-0.4284f, -0.9289f, -0.7424f),
         glm::pi<float>() / 4.0f, 8.0f);
@@ -97,6 +110,7 @@ int main()
     lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 32.0f);
 
     std::vector spotLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &shipSpotlight};
+    std::vector rechargeLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3};
 
     std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight};
 
@@ -119,7 +133,11 @@ int main()
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg", true);
-    util::Textured2D toonMap("resources/textures/toon_map.png");
+
+    util::Textured2D toonMapShip("resources/textures/toon_map_ship.png");
+    util::Textured2D toonMapEarth("resources/textures/toon_map_earth.png");
+    util::Textured2D toonMapAsteroid("resources/textures/toon_map_asteroid.png");
+    util::Textured2D toonMapPlatform("resources/textures/toon_map_platform.png");
 
     util::Textured2D metalNormalMap("resources/textures/metal_norm.jpg");
     util::Textured2D metalSpecularMap("resources/textures/metal_spec.jpg");
@@ -133,27 +151,29 @@ int main()
     Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
     Mesh particleMesh = mergeMeshes(loadMesh("resources/models/quad.obj"));
     Mesh spaceshipAnimation[FRAMES];
-    
-    for (int i = 0; i < FRAMES; i += SKIP_FRAMES) {
-        spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i+1) + ".obj"));
+
+    for (int i = 0; i < FRAMES; i += SKIP_FRAMES)
+    {
+        spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i + 1) + ".obj"));
     }
-  
+
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
     materials::GenericMaterial asteroidMaterial;
-    asteroidMaterial.toonTexture = &toonMap;
+    asteroidMaterial.toonTexture = &toonMapAsteroid;
     asteroidMaterial.diffuseTexture = &rockTexture;
     asteroidMaterial.shininess = 64;
 
     materials::GenericMaterial shipMaterial;
-    shipMaterial.toonTexture = &toonMap;
+    shipMaterial.toonTexture = &toonMapShip;
     shipMaterial.diffuseTexture = &spaceshipTexture;
     shipMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
     shipMaterial.shininess = 256;
     shipMaterial.toonUsage = 0.0f;
 
     materials::GenericMaterial earthMaterial;
+    earthMaterial.toonTexture = &toonMapEarth;
     earthMaterial.diffuseTexture = &earthDayTexture;
     earthMaterial.shadowTexture = &earthNightTexture;
     earthMaterial.normalTexture = &earthNormalTexture;
@@ -162,6 +182,7 @@ int main()
     earthMaterial.useShadows = false;
 
     materials::GenericMaterial moonMaterial;
+    moonMaterial.toonTexture = &toonMapAsteroid;
     moonMaterial.shininess = 2.0f;
     moonMaterial.ambient = 0.0f;
     moonMaterial.specularTexture = &moonTexture;
@@ -181,6 +202,7 @@ int main()
     skyboxMaterial.useShadows = false;
 
     materials::GenericMaterial platformMaterial;
+    platformMaterial.toonTexture = &toonMapPlatform;
     platformMaterial.diffuseTexture = &metalDiffuseMap;
     platformMaterial.normalTexture = &metalNormalMap;
     platformMaterial.specularTexture = &metalSpecularMap;
@@ -208,15 +230,16 @@ int main()
             glm::mat4(1.0f),
             glm::vec3(0.0f, -2.0f, 0.0f)),
         glm::vec3(platformScale));
-  
-    MeshDrawer * spaceshipAnimationDrawers[FRAMES];
 
-    for (int i = 0; i < FRAMES; i += SKIP_FRAMES) {
+    MeshDrawer *spaceshipAnimationDrawers[FRAMES];
+
+    for (int i = 0; i < FRAMES; i += SKIP_FRAMES)
+    {
         spaceshipAnimationDrawers[i] = new MeshDrawer(&spaceshipAnimation[i], &shipMaterial);
     }
 
     entities::AsteroidManager asteroidManager;
-    std::vector meshes { spaceshipAnimationDrawers[0], &platformDrawer};
+    std::vector meshes{spaceshipAnimationDrawers[0], &platformDrawer};
 
     Particle *particles[NUMOFPARTICLES];
 
@@ -226,6 +249,7 @@ int main()
 
     window.setMouseCapture(true);
     viewCamera.initialInput();
+
     timing::start();
     int updateFrame = 0, animationFrame = 0;
 
@@ -234,14 +258,56 @@ int main()
     {
         window.updateInput();
         viewCamera.updateInput();
+
         timing::update();
 
-        asteroidManager.update(viewCamera.m_position);
+        float powerUpTimeLeft = gamestate::powerUpActiveUntil - timing::time_s;
+        bool poweredUp = powerUpTimeLeft > 0.0f;
+
+        if (!poweredUp && !gamestate::paused)
+        {
+            for (auto recharger : rechargeLights)
+            {
+                glm::vec3 inlightPos = math::vec4toVec3(recharger->mvp * glm::vec4(viewCamera.m_position, 1.0f));
+                if (inlightPos.x > -1 && inlightPos.x < 1 && inlightPos.y > -1 && inlightPos.y < 1 && inlightPos.z < 1 && inlightPos.z > -1)
+                {
+                    gamestate::powerUpAvailable = true;
+                    break;
+                }
+            }
+        }
+
+        if (!poweredUp && !gamestate::paused && gamestate::powerUpAvailable && window.isKeyPressed(GLFW_KEY_E))
+        {
+            poweredUp = true;
+            gamestate::powerUpAvailable = false;
+            gamestate::powerUpActiveUntil = timing::time_s + powerUpDuration;
+        }
+
+        float powerUpDelta = poweredUp ? 1.0f : -1.0f;
+        gamestate::powerUp = glm::clamp(gamestate::powerUp + timing::delta_s * powerUpDelta * powerUpTransitionSpeed, 0.0f, 1.0f);
+
+        platformMaterial.toonUsage = gamestate::powerUp;
+        shipMaterial.toonUsage = gamestate::powerUp;
+        asteroidMaterial.toonUsage = gamestate::powerUp;
+        moonMaterial.toonUsage = gamestate::powerUp;
+        earthMaterial.toonUsage = gamestate::powerUp;
+
+        if (!gamestate::paused)
+        {
+            asteroidManager.update(viewCamera.m_position);
+        }
+
+        float shootCooldown = gamestate::shootCooldown - timing::time_s;
+        bool canshoot = shootCooldown < 0.0f;
+        float shootCooldownTime = SHOOT_COOLDOWN * (1.0f - gamestate::powerUp * 0.5f);
+        bool showShoot = shootCooldown / shootCooldownTime > 0.25f;
 
         bool shooting = window.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
-        if (shooting)
+        if (shooting && canshoot && !gamestate::paused)
         {
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+            gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
         bool hitByAsteroid = asteroidManager.hitBy(viewCamera.m_position, 1.0f);
@@ -258,8 +324,8 @@ int main()
         glm::vec4 rotated = rotationMat * baseDirection;
         glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
         sunlight.direction = normalRotated;
-        
-        float animationProgress = glm::mod(timing::time_s, ANIMATION_DURATION) / ANIMATION_DURATION;
+
+        float animationProgress = 1.0f - gamestate::powerUp;
         int animationFrame = SKIP_FRAMES * int(animationProgress * (FRAMES - 1) / SKIP_FRAMES);
         meshes[0] = spaceshipAnimationDrawers[animationFrame];
 
@@ -280,7 +346,7 @@ int main()
         glm::vec3 r = viewCamera.m_right;
         glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
         shipTransform *= rotation;
-      
+
         meshes[0]->transformation = shipTransform;
         // const glm::mat4 model { 1.0f };
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
@@ -382,7 +448,7 @@ int main()
         }
 
         // draw earth, moon and sun
-        float earthRotation = timing::time_s * 0.2f;
+        float earthRotation = timing::time_s * 0.08f;
         glm::mat4 earthTranslation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
         glm::mat4 earthScaled = glm::scale(earthTranslation, glm::vec3(2.0f));
         glm::mat4 earthCorrectRotation = glm::rotate(earthScaled, pi, glm::vec3(1, 0, 0));
@@ -406,7 +472,6 @@ int main()
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
-
 
         // render asteroids
         for (auto asteroid : asteroidManager.asteroids)
@@ -445,12 +510,23 @@ int main()
         drawList->AddCircle(
             ImVec2(windowSize.x / 2.0f, windowSize.y / 2.0f),
             4,
-            IM_COL32_WHITE,
+            showShoot ? IM_COL32_WHITE : IM_COL32(255, 255, 255, 128),
             16);
 
         std::string scorestring = std::string("Score: ") + std::to_string(gamestate::score);
 
         std::string missedstring = std::string("Missed: ") + std::to_string(gamestate::missed);
+
+        std::string powerupString = std::string("Power up available: ") + (gamestate::powerUpAvailable ? std::string("Yes!") : std::string("No."));
+
+        std::string powerupDurationString = gamestate::paused ? std::string("<Paused>")
+                                            :
+
+                                            poweredUp
+                                                ? std::string("Powered up for: ") + to_string_with_precision(powerUpTimeLeft, 1) + std::string("s")
+                                            : canshoot
+                                                ? std::string("")
+                                                : std::string("Cooldown...");
 
         drawList->AddText(
             ImGui::GetFont(),
@@ -466,16 +542,39 @@ int main()
             IM_COL32_WHITE,
             missedstring.c_str());
 
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 90),
+            IM_COL32_WHITE,
+            powerupString.c_str());
+
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 110),
+            IM_COL32_WHITE,
+            powerupDurationString.c_str());
+
         for (auto asteroid : asteroidManager.asteroids)
         {
             glm::vec4 toScreenSpace = mvp * glm::vec4(asteroid->currentPosition, 1.0f);
             glm::vec3 convertReal = math::vec4toVec3(toScreenSpace);
             glm::vec3 screenPosition = convertReal * 0.5f + 0.5f;
-            float xpos = std::clamp(screenPosition.x, 0.0f, 1.0f);
-            float ypos = 1.0f - std::clamp(screenPosition.y, 0.0f, 1.0f);
+            glm::vec2 pos = glm::vec2(
+                std::clamp(screenPosition.x, 0.0f, 1.0f),
+                1.0f - std::clamp(screenPosition.y, 0.0f, 1.0f)
+            );
+            
+            if (screenPosition.z < 0)
+            {
+                // clip to edge if outside of viewport
+                pos.x = pos.x > 0.5f ? 1.0f : 0.0f;
+                pos.y = pos.y > 0.5f ? 1.0f : 0.0f;
+            }
 
             drawList->AddCircle(
-                ImVec2(windowSize.x * xpos, windowSize.y * ypos),
+                ImVec2(windowSize.x * pos.x, windowSize.y * pos.y),
                 8,
                 IM_COL32(255, 0, 0, 128),
                 6);

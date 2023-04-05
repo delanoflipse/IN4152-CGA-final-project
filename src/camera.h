@@ -23,6 +23,7 @@ public:
     glm::mat4 viewMatrix() const;
 
     bool m_front_view = false;
+    bool mouse_captured = false;
     float m_zoom = 10.0f;
     // TODO
     // float rotation_x = 0.0f;

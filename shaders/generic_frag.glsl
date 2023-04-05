@@ -137,7 +137,7 @@ void main()
     vec3 B = cross(N, T);
 
     mat3 TBN = mat3(T, B, N);
-    usedNormal = TBN * mapNormal;
+    usedNormal = mix(TBN * mapNormal, N, toonUsage);
   }
 
   if (useSpecularTexture == 1) {
@@ -148,6 +148,7 @@ void main()
   vec4 pos4 = vec4(fragment.position, 1.0);
 
   int numberOfLights = min(MAX_LIGHTS, lightCount);
+  float lightNormalize = 1 / float(numberOfLights);
 
   for (int i = 0; i < numberOfLights; i++) {
     if (lightEnabled[i] == 0) {
@@ -278,12 +279,12 @@ void main()
     vec4 toonColor = vec4(0);
     if (toonUsage > 0) {
       float z = length(toCamera);
-      float dist = z / 10;
+      float dist = clamp(z / 5, 0, 1);
       float brightness = max(lightness, specularness);
       toonColor = texture(toonTexture, vec2(brightness, 1 - dist));
     }
 
-    vec4 genericColor = mix(fragShadowColor, fragDiffuseColor, lightness) + specularness * fragSpecularColor * lightColor;
+    vec4 genericColor = mix(fragShadowColor, fragDiffuseColor, lightness) * lightColor + specularness * fragSpecularColor * lightColor;
     colorSum += maxVec(vec4(0), mix(genericColor, toonColor, toonUsage));
   }
 
@@ -293,7 +294,7 @@ void main()
   return;
   #endif
 
-  vec4 finalColor = colorSum;
+  vec4 finalColor = colorSum * (1 - toonUsage * (1 - lightNormalize));
   // apply gamma correction
   float gamma = 2.2;
   finalColor.rgb = pow(finalColor.rgb, vec3(1.0/gamma));
