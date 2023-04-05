@@ -36,6 +36,7 @@ uniform vec3 diffuseColor;
 uniform vec3 specularColor;
 uniform float shininess;
 uniform float ambient;
+uniform float transparency;
 
 // TEXTURES
 uniform int useDiffuseTexture;
@@ -296,6 +297,8 @@ void main()
   // apply gamma correction
   float gamma = 2.2;
   finalColor.rgb = pow(finalColor.rgb, vec3(1.0/gamma));
+
+  finalColor.a = transparency;
 
   outColor = finalColor;
 }

@@ -36,6 +36,7 @@ namespace shaders
     saveShaderVar(&generic, "specularColor");
     saveShaderVar(&generic, "shininess");
     saveShaderVar(&generic, "ambient");
+    saveShaderVar(&generic, "transparency");
 
     saveShaderVar(&generic, "lightCount");
     saveShaderVar(&generic, "lightTypes");
