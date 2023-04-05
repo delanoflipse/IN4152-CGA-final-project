@@ -86,6 +86,8 @@ int main()
     util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
+    util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
@@ -109,8 +111,9 @@ int main()
 
     materials::GenericMaterial shipMaterial;
     shipMaterial.toonTexture = &toonMap;
-    shipMaterial.diffuseTexture = &rockTexture;
-    shipMaterial.shininess = 64;
+    shipMaterial.diffuseTexture = &spaceshipTexture;
+    shipMaterial.diffuseColor = glm::vec3(0.1f, 0.1f, 0.1f);
+    shipMaterial.shininess = 256;
     shipMaterial.toonUsage = 0.0f;
 
     materials::GenericMaterial earthMaterial;
