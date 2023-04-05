@@ -43,6 +43,11 @@ DISABLE_WARNINGS_POP()
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 
+const int FRAMES = 200;
+const int SKIP_FRAMES = 8;
+const int ANIMATION_FPS = 30;
+const float ANIMATION_DURATION = 0.833f;
+
 const std::string WINDOW_TITLE = "Group 8";
 
 int main()
@@ -124,9 +129,9 @@ int main()
     Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/models/spaceship.obj"));
     Mesh platformMesh = mergeMeshes(loadMesh("resources/models/platform.obj"));
     Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
-    Mesh spaceshipAnimation[200];
+    Mesh spaceshipAnimation[FRAMES];
     
-    for (int i = 0; i < 200; i++) {
+    for (int i = 0; i < FRAMES; i += SKIP_FRAMES) {
         spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i+1) + ".obj"));
     }
   
@@ -190,14 +195,11 @@ int main()
             glm::vec3(0.0f, -2.0f, 0.0f)),
         glm::vec3(platformScale));
   
-    std::vector<MeshDrawer *> spaceshipAnimationDrawers{};
+    MeshDrawer * spaceshipAnimationDrawers[FRAMES];
 
-    for (int i = 0; i < 200; i++) {
-        MeshDrawer *tempSpaceshipDrawer = new MeshDrawer(&spaceshipAnimation[i], &shipMaterial);
-        spaceshipAnimationDrawers.push_back(tempSpaceshipDrawer);
+    for (int i = 0; i < FRAMES; i += SKIP_FRAMES) {
+        spaceshipAnimationDrawers[i] = new MeshDrawer(&spaceshipAnimation[i], &shipMaterial);
     }
-
-    // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
 
     entities::AsteroidManager asteroidManager;
     std::vector meshes { spaceshipAnimationDrawers[0], &platformDrawer};
@@ -236,11 +238,10 @@ int main()
         glm::vec4 rotated = rotationMat * baseDirection;
         glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
         sunlight.direction = normalRotated;
-
-        if (updateFrame++ % 10 == 0) {
-            meshes[0] = spaceshipAnimationDrawers[animationFrame++];
-            animationFrame = animationFrame % 200;
-        }
+        
+        float animationProgress = glm::mod(timing::time_s, ANIMATION_DURATION) / ANIMATION_DURATION;
+        int animationFrame = SKIP_FRAMES * int(animationProgress * (FRAMES - 1) / SKIP_FRAMES);
+        meshes[0] = spaceshipAnimationDrawers[animationFrame];
 
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();
@@ -248,6 +249,19 @@ int main()
         shipSpotlight.direction = viewCamera.m_forward;
         shipSpotlight.position = viewCamera.m_position + viewCamera.m_forward * 0.05f;
 
+        // render ship
+        glm::mat4x4 shipTransform = glm::mat4(1.0f);
+
+        shipTransform = glm::translate(shipTransform, viewCamera.m_position - viewCamera.m_up);
+        shipTransform = glm::rotate(shipTransform, glm::half_pi<float>(), viewCamera.m_up);
+
+        glm::vec3 f = viewCamera.m_forward;
+        glm::vec3 u = viewCamera.m_up;
+        glm::vec3 r = viewCamera.m_right;
+        glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
+        shipTransform *= rotation;
+      
+        meshes[0]->transformation = shipTransform;
         // const glm::mat4 model { 1.0f };
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
@@ -287,6 +301,7 @@ int main()
 
                 drawer->shadow();
             }
+            light->shadowMap->disablePass();
         }
 
         // window.swapBuffers();
@@ -373,19 +388,6 @@ int main()
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
 
-        // render ship
-        glm::mat4x4 shipTransform = glm::mat4(1.0f);
-
-        shipTransform = glm::translate(shipTransform, viewCamera.m_position - viewCamera.m_up);
-        shipTransform = glm::rotate(shipTransform, glm::half_pi<float>(), viewCamera.m_up);
-
-        glm::vec3 f = viewCamera.m_forward;
-        glm::vec3 u = viewCamera.m_up;
-        glm::vec3 r = viewCamera.m_right;
-        glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
-        shipTransform *= rotation;
-      
-        meshes[0]->transformation = shipTransform;
 
         // render asteroids
         for (auto asteroid : asteroidManager.asteroids)
