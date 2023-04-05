@@ -26,6 +26,7 @@ namespace materials
 
     util::Textured2D *overlayTexture = NULL;
     util::Textured2D *normalTexture = NULL;
+    util::Textured2D *specularTexture = NULL;
     util::Textured2D *diffuseTexture = NULL;
     util::Textured2D *shadowTexture = NULL;
     util::Textured2D *toonTexture = NULL;
@@ -119,6 +120,16 @@ namespace materials
       else
       {
         glUniform1i(shaders::generic.vars["useNormalTexture"], 0);
+      }
+
+      if (specularTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useSpecularTexture"], 1);
+        specularTexture->bindUniform(shaders::generic.vars["specularTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useSpecularTexture"], 0);
       }
     }
   };

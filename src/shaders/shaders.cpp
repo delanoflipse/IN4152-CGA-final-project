@@ -54,6 +54,8 @@ namespace shaders
     saveShaderVar(&generic, "overlayTexture");
     saveShaderVar(&generic, "useNormalTexture");
     saveShaderVar(&generic, "normalTexture");
+    saveShaderVar(&generic, "useSpecularTexture");
+    saveShaderVar(&generic, "specularTexture");
     saveShaderVar(&generic, "useShadows");
     saveShaderVar(&generic, "useLights");
     saveShaderVar(&generic, "toonUsage");

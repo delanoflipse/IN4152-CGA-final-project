@@ -2,7 +2,7 @@
 
 #define MAX_LIGHTS 8
 #define LIGHT_SAMPLES 1
-#define DEBUG_NORMAL
+// #define DEBUG_NORMAL
 #define DEBUG_SHADOW_MAP
 #define PIXEL_SIZE 1 / 1024
 
@@ -48,6 +48,9 @@ uniform sampler2D toonTexture;
 uniform int useNormalTexture;
 uniform sampler2D normalTexture;
 
+uniform int useSpecularTexture;
+uniform sampler2D specularTexture;
+
 //  ---- INPUT/OUTPUT ----
 // Output for on-screen color
 layout(location = 0) out vec4 outColor;
@@ -58,7 +61,8 @@ in fData
   vec3 position;
   vec3 normal;
   vec2 uv;
-  mat3 TBN;
+  vec3 tangent;
+  vec3 bitangent;
 } fragment;
 
 float getDiffuse(vec3 lightDirection, vec3 normal)
@@ -113,6 +117,10 @@ void main()
     usedNormal = normalize(2 * texNormal - 1);
   }
 
+  if (useSpecularTexture) {
+    fragSpecularColor = texture(specularTexture, fragment.uv);
+  }
+
   vec4 colorSum = vec4(0);
   vec4 pos4 = vec4(fragment.position, 1.0);
 
@@ -136,9 +144,12 @@ void main()
 
     vec3 vLightDir = lightDirection;
     vec3 vCamDir = cameraDirection;
+
     if (useNormalMapping) {
-      vLightDir = fragment.TBN * vLightDir;
-      vCamDir = fragment.TBN * vCamDir;
+      mat3 TBN = transpose(mat3(fragment.tangent, fragment.bitangent, fragment.normal));
+      // TBN is an orthogonal matrix and
+      vLightDir = TBN * vLightDir;
+      vCamDir = TBN * vCamDir;
     }
     
     float diffuse = getDiffuse(vLightDir, usedNormal);
@@ -223,12 +234,10 @@ void main()
   }
 
   // Output the normal as color
-  // #ifdef DEBUG_NORMAL
-  // outColor = vec4(fragment.bitangent, 1);
-  // // outColor = vec4(fragment.normal, 1);
-  // // outColor = vec4(usedNormal, 1);
-  // return;
-  // #endif
+  #ifdef DEBUG_NORMAL
+  outColor = vec4(fragment.normal, 1);
+  return;
+  #endif
 
   vec4 finalColor = colorSum;
   outColor = vec4(colorSum.xyz, 1);
