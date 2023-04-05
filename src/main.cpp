@@ -183,7 +183,6 @@ int main()
 
     MeshDrawer asteroidDrawer(&asteroidMesh, &asteroidMaterial);
     MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
-    MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
     platformDrawer.transformation = glm::scale(
         glm::translate(
@@ -191,10 +190,9 @@ int main()
             glm::vec3(0.0f, -2.0f, 0.0f)),
         glm::vec3(platformScale));
   
-    MeshDrawer spaceshipDrawer(&spaceshipAnimation[0], &shipMaterial);
-    std::vector spaceshipAnimationDrawers{ &spaceshipDrawer };
+    std::vector<MeshDrawer *> spaceshipAnimationDrawers{};
 
-    for (int i = 1; i < 200; i++) {
+    for (int i = 0; i < 200; i++) {
         MeshDrawer *tempSpaceshipDrawer = new MeshDrawer(&spaceshipAnimation[i], &shipMaterial);
         spaceshipAnimationDrawers.push_back(tempSpaceshipDrawer);
     }
