@@ -21,7 +21,6 @@ out fData
   vec3 normal;
   vec2 uv;
   vec3 tangent;
-  vec3 bitangent;
 } fragment;    
 
 void main() {
@@ -41,12 +40,9 @@ void main() {
   vec2 uvEdge01 = uv1 - uv0;
   vec2 uvEdge02 = uv2 - uv0;
 
-  float inverseDeterminant = 1 / (uvEdge01.x * uvEdge02.y - uvEdge02.x * uvEdge01.y);
-  vec3 tangent = inverseDeterminant * (edge01 * uvEdge02.y - edge02 * uvEdge01.y);
-  vec3 bitangent = inverseDeterminant * (edge01 * -uvEdge02.x + edge02 * uvEdge01.x);
-
+  float invDet = 1 / (uvEdge01.x * uvEdge02.y - uvEdge02.x * uvEdge01.y);
+  vec3 tangent = invDet * (edge01 * uvEdge02.y - edge02 * uvEdge01.y);
   fragment.tangent = normalize(tangent);
-  fragment.bitangent = normalize(bitangent);
   
   for (int i = 0; i < 3; i++) {
     gl_Position = gl_in[i].gl_Position;
