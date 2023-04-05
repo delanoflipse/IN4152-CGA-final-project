@@ -20,7 +20,8 @@ out fData
   vec3 position;
   vec3 normal;
   vec2 uv;
-  mat3 TBN;
+  vec3 tangent;
+  vec3 bitangent;
 } fragment;    
 
 void main() {
@@ -44,13 +45,8 @@ void main() {
   vec3 tangent = inverseDeterminant * (edge01 * uvEdge02.y - edge02 * uvEdge01.y);
   vec3 bitangent = inverseDeterminant * (edge01 * -uvEdge02.x + edge02 * uvEdge01.x);
 
-  vec3 T = normalize(tangent);
-  vec3 B = normalize(bitangent);
-  vec3 N = normalize(cross(edge01, edge02));
-
-  mat3 TBN = mat3(T, B, N);
-  // TBN is an orthogonal matrix and so its inverse is equal to its transpose
-  fragment.TBN = transpose(TBN);
+  fragment.tangent = normalize(tangent);
+  fragment.bitangent = normalize(bitangent);
   
   for (int i = 0; i < 3; i++) {
     gl_Position = gl_in[i].gl_Position;

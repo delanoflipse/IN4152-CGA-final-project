@@ -85,6 +85,7 @@ int main()
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
     util::Textured2D earthNormalTexture("resources/textures/2k_earth_normal_map.png");
+    util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
     util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
@@ -118,8 +119,9 @@ int main()
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
     earthMaterial.shadowTexture = &earthNightTexture;
-    earthMaterial.normalTexture = &earthNormalTexture;
-    earthMaterial.shininess = 0;
+    // earthMaterial.normalTexture = &earthNormalTexture;
+    earthMaterial.specularTexture = &earthSpecularTexture;
+    earthMaterial.shininess = 32;
     earthMaterial.useShadows = false;
 
     materials::GenericMaterial moonMaterial;
@@ -286,11 +288,13 @@ int main()
         }
 
         // draw earth, moon and sun
-        earthDrawer.transformation = glm::rotate(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f)), pi, glm::vec3(1, 0, 0));
+        glm::mat4 earthTranslation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
+        glm::mat4 earthScaled = glm::scale(earthTranslation, glm::vec3(2.0f));
+        earthDrawer.transformation = glm::rotate(earthScaled, pi, glm::vec3(1, 0, 0));
 
         earthDrawer.draw(&context);
 
-        moonDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
+        moonDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-2.6f, 3.2f, -10.0f)), glm::vec3(0.54));
         moonDrawer.draw(&context);
 
         sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
