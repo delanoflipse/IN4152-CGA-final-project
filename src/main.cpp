@@ -96,6 +96,11 @@ int main()
     Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
     Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/spaceship.obj"));
     Mesh platformMesh = mergeMeshes(loadMesh("resources/platform.obj"));
+    Mesh spaceshipAnimation[50];
+    
+    for (int i = 0; i < 50; i++) {
+        spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i+1) + ".obj"));
+    }
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -145,19 +150,39 @@ int main()
     MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
-    MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
+
+    MeshDrawer spaceshipDrawer(&spaceshipAnimation[0], &shipMaterial);
+    MeshDrawer spaceshipDrawer2(&spaceshipAnimation[0], &shipMaterial);
+
+    MeshDrawer* spaceshipAnimationDrawersp[50];
+    std::vector spaceshipAnimationDrawers{ &spaceshipDrawer2 };
+    /*
+    for (int i = 0; i < 50; i++) {
+        MeshDrawer tempSpaceshipDrawer(&spaceshipMesh, &shipMaterial);
+        spaceshipAnimationDrawersp[i] = &tempSpaceshipDrawer;
+    }
+    */
+    for (int i = 0; i < 50; i++) {
+        MeshDrawer tempSpaceshipDrawer(&spaceshipAnimation[0], &shipMaterial);
+        spaceshipAnimationDrawers.push_back(&tempSpaceshipDrawer);
+    }
+
     platformDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, -1.5, 0));
 
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
     
     entities::AsteroidManager asteroidManager;
     
-    std::vector meshes {&spaceshipDrawer, &platformDrawer};
-
-    glm::mat4 shipRotationMatrix{0};
+    std::vector meshes {&platformDrawer};
 
     timing::start();
+    int updateFrame = 0, animationFrame = 0;
+    /*
+    if (updateFrame++ % 20 == 0) {
+        meshes[0] = &spaceshipAnimationDrawers[animationFrame];
+        animationFrame = animationFrame++ % 200;
+    }*/
 
     // Main loop
     while (!window.shouldClose())
@@ -296,8 +321,9 @@ int main()
         glm::mat4 rotation{ r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1 };
         shipTransform *= rotation;
         
-        spaceshipDrawer.transformation = shipTransform;
-        
+        //meshes[0]->transformation = shipTransform;
+        spaceshipAnimationDrawers[1]->transformation = shipTransform;
+        spaceshipAnimationDrawers[1]->draw(&context);
 
         // render asteroids
         for (auto asteroid : asteroidManager.asteroids) {
