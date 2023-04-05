@@ -26,6 +26,7 @@ namespace shaders
   {
     generic.shader = ShaderBuilder()
                         .addStage(GL_VERTEX_SHADER, constants::SHADER_DIR + "shader_vert.glsl")
+                        .addStage(GL_GEOMETRY_SHADER, constants::SHADER_DIR + "generic_geom.glsl")
                         .addStage(GL_FRAGMENT_SHADER, constants::SHADER_DIR + "generic_frag.glsl")
                         .build();
 
@@ -51,6 +52,8 @@ namespace shaders
     saveShaderVar(&generic, "shadowTexture");
     saveShaderVar(&generic, "useOverlayTexture");
     saveShaderVar(&generic, "overlayTexture");
+    saveShaderVar(&generic, "useNormalTexture");
+    saveShaderVar(&generic, "normalTexture");
     saveShaderVar(&generic, "useShadows");
     saveShaderVar(&generic, "useLights");
     saveShaderVar(&generic, "toonUsage");
