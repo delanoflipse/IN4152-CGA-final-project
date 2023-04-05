@@ -16,6 +16,7 @@ public:
 
     void updateInput();
     void initialInput();
+    void reset();
     void setUserInteraction(bool enabled);
 
     glm::vec3 cameraPos() const;

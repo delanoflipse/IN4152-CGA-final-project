@@ -70,6 +70,14 @@ void Camera::initialInput()
     m_prevCursorPos = cursorPos;
 }
 
+void Camera::reset()
+{
+    m_position = { 0, 0, 0.0f };
+    m_forward = { 0, 0, -1 };
+    m_up = { 0, 1, 0 };
+    m_right = { 1, 0, 0 };
+}
+
 void Camera::updateInput()
 {
     float directionalAcceleration = 0.1f * timing::delta_s;

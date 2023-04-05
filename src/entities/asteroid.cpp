@@ -5,6 +5,7 @@
 #include <random>
 
 #include "../util/bezier.cpp"
+#include "../util/easing.cpp"
 
 // https://www.geeksforgeeks.org/generate-a-random-float-number-in-cpp/
 float randomFloat()
@@ -39,14 +40,16 @@ namespace entities
     float speed;
     glm::vec3 spawnDirection;
     glm::vec3 targetDirection;
+    glm::vec3 centerPosition;
     glm::vec3 currentPosition;
     float progress = 0.0f;
     bool isEasterEgg = false;
 
-    Asteroid()
+    Asteroid(glm::vec3 centerpos)
     {
-      speed = randomRange(0.075, 0.125);
-      isEasterEgg = randomFloat() > 0.85;
+      centerPosition = centerpos;
+      speed = randomRange(0.075, 0.1);
+      isEasterEgg = randomFloat() > 0.95;
 
       float scaleX = randomRange(MIN_SCALE, MAX_SCALE);
       float scaleY = randomRange(MIN_SCALE, MAX_SCALE);
@@ -61,9 +64,7 @@ namespace entities
       baseTransformation *= glm::rotate(glm::mat4(1.0f), rotation, rotAxis);
       baseTransformation *= glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, scaleZ));
       
-      inverseBaseTransform = glm::inverse(
-        glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, scaleZ))
-      );
+      inverseBaseTransform = glm::inverse(baseTransformation);
 
       spawnDirection = randomDirection();
       targetDirection = randomDirection();
@@ -73,15 +74,20 @@ namespace entities
     void update()
     {
       float spawnRadius = 50.0f;
+      float scaleNorm = std::min(1.0f, 10.0f * easing::triangle(progress));
+      float scale = easing::easeInOutCubic(scaleNorm);
+
       // glm::vec3 direction = targetLocation - spawnLocation;
       currentPosition = math::cubicBezier(
-        spawnDirection * spawnRadius,
-        spawnDirection * spawnRadius * 0.15f,
-        targetDirection * spawnRadius * 0.15f,
-        targetDirection * spawnRadius,
+        centerPosition + spawnDirection * spawnRadius,
+        centerPosition + spawnDirection * spawnRadius * 0.15f,
+        centerPosition + targetDirection * spawnRadius * 0.15f,
+        centerPosition + targetDirection * spawnRadius,
         progress
       );
+      
       currentTransformation = glm::translate(glm::mat4(1.0f), currentPosition);
+      currentTransformation = glm::scale(currentTransformation, glm::vec3(scale));
     }
   };
 };

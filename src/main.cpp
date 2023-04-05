@@ -1,7 +1,5 @@
 #pragma once
 
-#define GLM_FORCE_SWIZZLE
-
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
@@ -206,12 +204,19 @@ int main()
         viewCamera.updateInput();
         timing::update();
 
-        asteroidManager.update();
+        asteroidManager.update(viewCamera.m_position);
 
         bool shooting = window.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
         if (shooting)
         {
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+        }
+
+        bool hitByAsteroid = asteroidManager.hitBy(viewCamera.m_position, 1.0f);
+        if (hitByAsteroid)
+        {
+            viewCamera.reset();
+            gamestate::hits++;
         }
 
         // float sunRotation = timing::time_s * 2.0f;
@@ -411,7 +416,7 @@ int main()
         for (auto asteroid : asteroidManager.asteroids)
         {
             glm::vec4 toScreenSpace = mvp * glm::vec4(asteroid->currentPosition, 1.0f);
-            glm::vec3 convertReal = toScreenSpace.xyz * (1.0f / toScreenSpace.w);
+            glm::vec3 convertReal = math::vec4toVec3(toScreenSpace);
             glm::vec3 screenPosition = convertReal * 0.5f + 0.5f;
             float xpos = std::clamp(screenPosition.x, 0.0f, 1.0f);
             float ypos = 1.0f - std::clamp(screenPosition.y, 0.0f, 1.0f);
