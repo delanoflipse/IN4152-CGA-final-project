@@ -6,6 +6,7 @@
 // #define DEBUG_SHADOW
 // #define DEBUG_SHADOW_MAP
 // #define DEBUG_SHADOW_MVP
+// #define DEBUG_SHADOW_MAP_POS
 // #define DEBUG_SHADOW_SPOT
 
 //  ---- SCENE SPECIFIC ----
@@ -66,7 +67,6 @@ in fData
   vec3 normal;
   vec2 uv;
   vec3 tangent;
-  vec3 bitangent;
 } fragment;
 
 float getDiffuse(vec3 lightDirection, vec3 normal)
@@ -84,6 +84,16 @@ float getSpecular(vec3 lightDirection, vec3 cameraDirection, vec3 normal)
 
   float specularIntensity = shininess > 0 ? pow(specularReflection, shininess) : 0;
   return specularIntensity;
+}
+
+vec4 maxVec(vec4 v1, vec4 v2)
+{
+  return vec4(
+    max(v1.x, v2.x),
+    max(v1.y, v2.y),
+    max(v1.z, v2.z),
+    max(v1.w, v2.w)
+  );
 }
 
 void main()
@@ -117,8 +127,16 @@ void main()
 
   bool useNormalMapping = useNormalTexture == 1;
   if (useNormalMapping) {
-    vec3 texNormal = normalize(texture(normalTexture, fragment.uv).xyz);
-    usedNormal = normalize(2 * texNormal - 1);
+    vec3 texNormal = texture(normalTexture, fragment.uv).xyz;
+    vec3 mapNormal = normalize(2 * texNormal - 1);
+
+    vec3 N = fragment.normal;
+    vec3 T = fragment.tangent;
+    T = normalize(T - dot(T, N) * N);
+    vec3 B = cross(N, T);
+
+    mat3 TBN = mat3(T, B, N);
+    usedNormal = TBN * mapNormal;
   }
 
   if (useSpecularTexture) {
@@ -148,19 +166,9 @@ void main()
 
     // base values
     vec4 lightColor = lightColors[i];
-
-    vec3 vLightDir = lightDirection;
-    vec3 vCamDir = cameraDirection;
-
-    if (useNormalMapping) {
-      mat3 TBN = transpose(mat3(fragment.tangent, fragment.bitangent, fragment.normal));
-      // TBN is an orthogonal matrix and
-      vLightDir = TBN * vLightDir;
-      vCamDir = TBN * vCamDir;
-    }
     
-    float diffuse = getDiffuse(vLightDir, usedNormal);
-    float specular = getSpecular(vLightDir, vCamDir, usedNormal);
+    float diffuse = getDiffuse(lightDirection, usedNormal);
+    float specular = getSpecular(lightDirection, cameraDirection, usedNormal);
 
     float inShadow = 0;
 
@@ -174,6 +182,10 @@ void main()
       // The resulting value is in NDC space (-1 to +1),
       //  we transform them to texture space (0 to 1).
       vec2 shadowMapCoord = asLightPosition.xy * 0.5 + 0.5;
+      #ifdef DEBUG_SHADOW_MAP_POS
+      outColor = vec4(shadowMapCoord.x, shadowMapCoord.y, 0, 1);
+      return;
+      #endif
 
       // float fragLightDepth = asLightPosition.z;
       float fragLightDepth = asLightPosition.z * 0.5 + 0.5;
@@ -192,6 +204,7 @@ void main()
         int samplesPerAxis = (2 * samples + 1);
         int totalSamples = samplesPerAxis * samplesPerAxis;
         float pixelSize = lightShadowPixelSize[i];
+        
 
         for (int y = -samples; y <= samples; y++) {
           for (int x = -samples; x <= samples; x++) {
@@ -225,7 +238,7 @@ void main()
 
         if (lightType == 1) {
           // spotlight
-          float coneDropoff = pow(2 * length(vec2(0.5, 0.5) - shadowMapCoord), 1.5);
+          float coneDropoff = pow(2 * length(vec2(0.5, 0.5) - shadowMapCoord), 2);
           float distanceDropoff = lightFalloffDistance > 0
             ? pow(length(lightPosition - fragment.position) / lightFalloffDistance, 1)
             : 0;
@@ -249,7 +262,7 @@ void main()
       
     }
 
-    float shadowFactor = clamp(1 - inShadow, 0.0, 1.0);
+    float shadowFactor = clamp(1.0 - inShadow, 0.0, 1.0);
 
     #ifdef DEBUG_SHADOW
     outColor = vec4(vec3(shadowFactor), 1);
@@ -259,7 +272,7 @@ void main()
 
     // TODO: now its x * ambient, which is incorrect
     float lightness = max(ambient, diffuse * shadowFactor);
-    float specularness = specular * shadowFactor;
+    float specularness = max(0, specular * shadowFactor);
 
     vec4 toonColor = vec4(0);
     if (toonUsage > 0) {
@@ -270,15 +283,15 @@ void main()
     }
 
     vec4 genericColor = mix(fragShadowColor, fragDiffuseColor, lightness) + specularness * fragSpecularColor * lightColor;
-    colorSum += mix(genericColor, toonColor, toonUsage);
+    colorSum += maxVec(vec4(0), mix(genericColor, toonColor, toonUsage));
   }
 
   // Output the normal as color
   #ifdef DEBUG_NORMAL
-  outColor = vec4(fragment.normal, 1);
+  outColor = vec4(usedNormal, 1);
   return;
   #endif
 
   vec4 finalColor = colorSum;
-  outColor = vec4(colorSum.xyz, 1);
+  outColor = finalColor;
 }

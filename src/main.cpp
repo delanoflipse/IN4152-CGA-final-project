@@ -66,8 +66,8 @@ int main()
     Camera viewCamera{&window, glm::vec3(0.f, .0f, .0f), glm::vec3(0.0f, 0.0f, -1.0f)};
 
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
-    lights::DirectionalLight earthLight(glm::vec4(0.47451f, 0.52549f, 0.61176f, 1.0f), glm::normalize(glm::vec3(0.f, 0.f, -1.f)));
-    std::vector directionalLights = {&sunlight, &earthLight};
+    // lights::DirectionalLight earthLight(glm::vec4(0.47451f, 0.52549f, 0.61176f, 1.0f), glm::normalize(glm::vec3(0.f, 0.f, -1.f)));
+    std::vector directionalLights = {&sunlight};
 
     float platformScale = 2.0f;
 
@@ -89,11 +89,11 @@ int main()
         glm::vec3(-0.4284f, -0.9289f, -0.7424f),
         glm::pi<float>() / 4.0f, 8.0f);
 
-    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
+    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 32.0f);
 
     std::vector spotLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &shipSpotlight};
 
-    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight, &earthLight};
+    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight};
 
     const float pi = glm::pi<float>();
     const float pi2 = pi / 2;
@@ -115,7 +115,10 @@ int main()
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
     util::Textured2D toonMap("resources/textures/toon_map.png");
-    // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
+
+    util::Textured2D metalNormalMap("resources/textures/metal_norm.jpg");
+    util::Textured2D metalSpecularMap("resources/textures/metal_spec.jpg");
+    util::Textured2D metalDiffuseMap("resources/textures/metal_tex.jpg");
 
     // === Load meshes  ===
     Mesh asteroidMesh = mergeMeshes(loadMesh("resources/models/asteroid.obj"));
@@ -130,7 +133,6 @@ int main()
     asteroidMaterial.toonTexture = &toonMap;
     asteroidMaterial.diffuseTexture = &rockTexture;
     asteroidMaterial.shininess = 64;
-    // asteroidMaterial.toonUsage = 0.5f;
 
     materials::GenericMaterial shipMaterial;
     shipMaterial.toonTexture = &toonMap;
@@ -142,7 +144,7 @@ int main()
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
     earthMaterial.shadowTexture = &earthNightTexture;
-    // earthMaterial.normalTexture = &earthNormalTexture;
+    earthMaterial.normalTexture = &earthNormalTexture;
     earthMaterial.specularTexture = &earthSpecularTexture;
     earthMaterial.shininess = 32;
     earthMaterial.useShadows = false;
@@ -165,8 +167,9 @@ int main()
     skyboxMaterial.useShadows = false;
 
     materials::GenericMaterial platformMaterial;
-    platformMaterial.diffuseColor = glm::vec4(.8f, .8f, .8f, 1.0f);
-    // platformMaterial.diffuseTexture = &spaceshipTexture;
+    platformMaterial.diffuseTexture = &metalDiffuseMap;
+    platformMaterial.normalTexture = &metalNormalMap;
+    platformMaterial.specularTexture = &metalSpecularMap;
     platformMaterial.shininess = 256;
 
     MeshDrawer earthDrawer(&sphere1, &earthMaterial);
@@ -222,7 +225,7 @@ int main()
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();
 
-        shipSpotlight.direction = viewCamera.m_forward + viewCamera.m_up * 0.2f;
+        shipSpotlight.direction = viewCamera.m_forward;
         shipSpotlight.position = viewCamera.m_position + viewCamera.m_forward * 0.05f;
 
         // const glm::mat4 model { 1.0f };
@@ -324,9 +327,12 @@ int main()
         }
 
         // draw earth, moon and sun
+        
+        float earthRotation = timing::time_s * 0.2f;
         glm::mat4 earthTranslation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
         glm::mat4 earthScaled = glm::scale(earthTranslation, glm::vec3(2.0f));
-        earthDrawer.transformation = glm::rotate(earthScaled, pi, glm::vec3(1, 0, 0));
+        glm::mat4 earthCorrectRotation = glm::rotate(earthScaled, pi, glm::vec3(1, 0, 0));
+        earthDrawer.transformation = glm::rotate(earthCorrectRotation, earthRotation, glm::vec3(0, 1, 0));
 
         earthDrawer.draw(&context);
 
@@ -343,7 +349,6 @@ int main()
         {
             context.lightEnabled[spotLightOffset + i] = 1;
         }
-        // context.lightEnabled[0] = 0;
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
