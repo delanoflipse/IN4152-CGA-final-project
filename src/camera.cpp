@@ -1,3 +1,5 @@
+#pragma once
+
 #include "camera.h"
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
@@ -8,6 +10,8 @@ DISABLE_WARNINGS_PUSH()
 #include <iostream>
 #include "glm/gtx/string_cast.hpp"
 DISABLE_WARNINGS_POP()
+
+#include "util/clock.cpp"
 
 Camera::Camera(Window *pWindow)
     : Camera(pWindow, glm::vec3(0), glm::vec3(0, 0, -1))
@@ -68,9 +72,10 @@ void Camera::initialInput()
 
 void Camera::updateInput()
 {
-    constexpr float moveSpeed = 0.001f;
+    float directionalAcceleration = 0.1f * timing::delta_s;
     float maxMoveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
-    constexpr float lookSpeed = 0.0035f;
+    float lookSpeed = 0.0035f;
+
     glm::vec3 acceleration = glm::vec3(0.0f);
     m_front_view = m_pWindow->isKeyPressed(GLFW_KEY_TAB);
 
@@ -79,17 +84,17 @@ void Camera::updateInput()
     if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE))
         m_pWindow->setMouseCapture(false);
     if (m_pWindow->isKeyPressed(GLFW_KEY_A))
-        acceleration -= moveSpeed * right;
+        acceleration -= directionalAcceleration * right;
     if (m_pWindow->isKeyPressed(GLFW_KEY_D))
-        acceleration += moveSpeed * right;
+        acceleration += directionalAcceleration * right;
     if (m_pWindow->isKeyPressed(GLFW_KEY_W))
-        acceleration += moveSpeed * m_forward;
+        acceleration += directionalAcceleration * m_forward;
     if (m_pWindow->isKeyPressed(GLFW_KEY_S))
-        acceleration -= moveSpeed * m_forward;
+        acceleration -= directionalAcceleration * m_forward;
     if (m_pWindow->isKeyPressed(GLFW_KEY_R))
-        acceleration += moveSpeed * m_up;
+        acceleration += directionalAcceleration * m_up;
     if (m_pWindow->isKeyPressed(GLFW_KEY_F))
-        acceleration -= moveSpeed * m_up;
+        acceleration -= directionalAcceleration * m_up;
     if (m_pWindow->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
         m_zoom -= 0.05f;
     else
@@ -106,7 +111,7 @@ void Camera::updateInput()
     if (delta.y != 0.0f)
         rotateX(-delta.y);
 
-    glm::vec3 drag = glm::vec3(glm::sign(m_velocity.x) * (moveSpeed / 2), glm::sign(m_velocity.y) * (moveSpeed / 2), glm::sign(m_velocity.z) * (moveSpeed / 2));
+    glm::vec3 drag = glm::vec3(glm::sign(m_velocity.x) * (directionalAcceleration / 2), glm::sign(m_velocity.y) * (directionalAcceleration / 2), glm::sign(m_velocity.z) * (directionalAcceleration / 2));
 
     m_velocity += acceleration - m_velocity * 0.01f;
     if (glm::length(m_velocity) > 3 * maxMoveSpeed)
