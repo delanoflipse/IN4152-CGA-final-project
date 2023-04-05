@@ -63,14 +63,36 @@ int main()
 
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
     std::vector directionalLights = {&sunlight};
+    
+    float platformScale = 2.0f;
 
-    lights::SpotLight platformSpotlight(glm::vec4(1.0f), glm::vec3(0.01, 2, 0), glm::vec3(-0.01, -1, 0), glm::pi<float>() / 8.0f, 4.0f);
+    lights::SpotLight platformSpotlight1 (
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(-0.8575f, 0.9289f, 0.0f),
+        glm::vec3(0.8575f, -0.9289f,  0.0f),
+        glm::pi<float>() / 4.0f, 8.0f
+    );
+
+    lights::SpotLight platformSpotlight2 (
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(0.4284f, 0.9289f, -0.7424f),
+        glm::vec3(-0.4284f, -0.9289f, 0.7424f),
+        glm::pi<float>() / 4.0f, 8.0f
+    );
+
+    lights::SpotLight platformSpotlight3 (
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(0.4284f, 0.9289f, 0.7424f),
+        glm::vec3(-0.4284f, -0.9289f, -0.7424f),
+        glm::pi<float>() / 4.0f, 8.0f
+    );
+
 
     lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
 
-    std::vector spotLights = {&platformSpotlight, &shipSpotlight};
+    std::vector spotLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &shipSpotlight};
 
-    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight, &sunlight};
+    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight};
 
     const float pi = glm::pi<float>();
     const float pi2 = pi / 2;
@@ -143,6 +165,7 @@ int main()
 
     materials::GenericMaterial platformMaterial;
     platformMaterial.diffuseColor = glm::vec4(.8f, .8f, .8f, 1.0f);
+    // platformMaterial.diffuseTexture = &spaceshipTexture;
     platformMaterial.shininess = 256;
 
     MeshDrawer earthDrawer(&sphere1, &earthMaterial);
@@ -154,7 +177,13 @@ int main()
     MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
     MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
-    platformDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, -1.5, 0));
+    platformDrawer.transformation = glm::scale(
+        glm::translate(
+            glm::mat4(1.0f),
+            glm::vec3(0.0f, -2.0f, 0.0f)
+        ),
+        glm::vec3(platformScale)
+    );
 
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
 
@@ -177,7 +206,8 @@ int main()
 
         asteroidManager.update();
 
-        float sunRotation = timing::time_s * 2.0f;
+        // float sunRotation = timing::time_s * 2.0f;
+        float sunRotation = 0.0f;
         glm::mat4 rotationMat = glm::rotate(glm::mat4(1.0f), glm::radians(sunRotation), glm::vec3(0.0, 0.0, 1.0));
         glm::vec4 baseDirection = glm::vec4(-1.f, 0.2f, 0.f, 1.0);
         glm::vec4 rotated = rotationMat * baseDirection;
@@ -196,7 +226,7 @@ int main()
         // === Render shadow maps ===
         for (auto light : lights)
         {
-            light->shadowMap.enablePass();
+            light->shadowMap->enablePass();
             // Clear the shadow map and set needed options
             glClearDepth(1.0f);
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -206,7 +236,7 @@ int main()
             shaders::shadow.shader.bind();
 
             // Set viewport size
-            glViewport(0, 0, light->shadowMap.resolution, light->shadowMap.resolution);
+            glViewport(0, 0, light->shadowMap->resolution, light->shadowMap->resolution);
 
             light->updateMvp();
             const glm::mat4 shadowMvp = light->mvp;
@@ -263,7 +293,7 @@ int main()
             context.lightDirections[currentOffset] = directionalLights[i]->direction;
             context.lightColors[currentOffset] = directionalLights[i]->color;
             context.lightMvps[currentOffset] = directionalLights[i]->mvp;
-            context.lightShadowMaps[currentOffset] = &(directionalLights[i]->shadowMap);
+            context.lightShadowMaps[currentOffset] = directionalLights[i]->shadowMap;
             context.lightTypes[currentOffset] = 0;
             context.lightEnabled[currentOffset] = directionalLights[i]->active;
             currentOffset++;
@@ -275,9 +305,10 @@ int main()
             context.lightPositions[currentOffset] = spotLights[i]->position;
             context.lightColors[currentOffset] = spotLights[i]->color;
             context.lightMvps[currentOffset] = spotLights[i]->mvp;
-            context.lightShadowMaps[currentOffset] = &(spotLights[i]->shadowMap);
+            context.lightShadowMaps[currentOffset] = spotLights[i]->shadowMap;
             context.lightTypes[currentOffset] = 1;
             context.lightEnabled[currentOffset] = spotLights[i]->active;
+            context.lightDistances[currentOffset] = spotLights[i]->distance;
 
             currentOffset++;
         }
@@ -307,6 +338,7 @@ int main()
         {
             context.lightEnabled[spotLightOffset + i] = 1;
         }
+        // context.lightEnabled[0] = 0;
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
