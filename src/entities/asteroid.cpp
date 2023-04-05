@@ -39,10 +39,12 @@ namespace entities
     glm::vec3 spawnDirection;
     glm::vec3 targetDirection;
     float progress = 0.0f;
+    bool isEasterEgg = false;
 
     Asteroid()
     {
       speed = randomRange(0.075, 0.125);
+      isEasterEgg = randomFloat() > 0.85;
 
       float scaleX = randomRange(MIN_SCALE, MAX_SCALE);
       float scaleY = randomRange(MIN_SCALE, MAX_SCALE);

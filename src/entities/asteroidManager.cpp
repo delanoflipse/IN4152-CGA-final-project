@@ -37,6 +37,7 @@ namespace entities
 
         if (asteroid->progress >= 1)
         {
+          delete *iter;
           iter = asteroids.erase(iter);
         }
         else

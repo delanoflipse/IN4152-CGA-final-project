@@ -58,8 +58,7 @@ int main()
         }
         default:
             break;
-        }
-    });
+        } });
 
     Camera viewCamera{&window, glm::vec3(0.f, .0f, .0f), glm::vec3(0.0f, 0.0f, -1.0f)};
     viewCamera.initialInput();
@@ -67,9 +66,9 @@ int main()
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
     std::vector directionalLights = {&sunlight};
 
-    lights::SpotLight platformSpotlight(glm::vec4(1.0f), glm::vec3(0.01, 2, 0),  glm::vec3(-0.01, -1, 0), glm::pi<float>() / 8.0f, 4.0f);
+    lights::SpotLight platformSpotlight(glm::vec4(1.0f), glm::vec3(0.01, 2, 0), glm::vec3(-0.01, -1, 0), glm::pi<float>() / 8.0f, 4.0f);
 
-    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0),  glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
+    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
 
     std::vector spotLights = {&platformSpotlight, &shipSpotlight};
 
@@ -82,7 +81,7 @@ int main()
     shaders::loadShaders();
 
     // === Load textures ===
-    util::Textured2D rockTexture("resources/rocks.jpg");
+    util::Textured2D rockTexture("resources/textures/rocks.jpg");
     // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
     util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
@@ -94,10 +93,11 @@ int main()
     // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
 
     // === Load meshes  ===
-    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
-    Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
-    Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/spaceship.obj"));
-    Mesh platformMesh = mergeMeshes(loadMesh("resources/platform.obj"));
+    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/models/asteroid.obj"));
+    Mesh sphere1 = mergeMeshes(loadMesh("resources/models/unit_uv_sphere.obj"));
+    Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/models/spaceship.obj"));
+    Mesh platformMesh = mergeMeshes(loadMesh("resources/models/platform.obj"));
+    Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -140,21 +140,22 @@ int main()
     platformMaterial.diffuseColor = glm::vec4(.8f, .8f, .8f, 1.0f);
     platformMaterial.shininess = 256;
 
-    MeshDrawer earthDrawer (&sphere1, &earthMaterial);
-    MeshDrawer moonDrawer (&sphere1, &moonMaterial);
-    MeshDrawer sunDrawer (&sphere1, &sunMaterial);
-    MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
+    MeshDrawer earthDrawer(&sphere1, &earthMaterial);
+    MeshDrawer moonDrawer(&sphere1, &moonMaterial);
+    MeshDrawer sunDrawer(&sphere1, &sunMaterial);
+    MeshDrawer skyboxDrawer(&sphere1, &skyboxMaterial);
 
-    MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
+    MeshDrawer asteroidDrawer(&asteroidMesh, &asteroidMaterial);
+    MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
     MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
     platformDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, -1.5, 0));
 
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
-    
+
     entities::AsteroidManager asteroidManager;
-    
-    std::vector meshes {&spaceshipDrawer, &platformDrawer};
+
+    std::vector meshes{&spaceshipDrawer, &platformDrawer};
 
     glm::mat4 shipRotationMatrix{0};
 
@@ -179,7 +180,8 @@ int main()
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
         // === Render shadow maps ===
-        for (auto light : lights) {
+        for (auto light : lights)
+        {
             light->shadowMap.enablePass();
             // Clear the shadow map and set needed options
             glClearDepth(1.0f);
@@ -191,25 +193,30 @@ int main()
 
             // Set viewport size
             glViewport(0, 0, light->shadowMap.resolution, light->shadowMap.resolution);
-            
+
             light->updateMvp();
             const glm::mat4 shadowMvp = light->mvp;
             glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-            for (auto asteroid : asteroidManager.asteroids) {
-                asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
-                asteroidDrawer.shadow();
+            for (auto asteroid : asteroidManager.asteroids)
+            {
+                MeshDrawer *drawer = asteroid->isEasterEgg ? &asteroidEasterEggDrawer : &asteroidDrawer;
+
+                drawer->transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+                drawer->shadow();
             }
 
-            for (auto drawer : meshes) {
-                if (!drawer->castShadow) {
+            for (auto drawer : meshes)
+            {
+                if (!drawer->castShadow)
+                {
                     continue;
                 }
 
                 drawer->shadow();
             }
         }
-        
+
         // window.swapBuffers();
         // continue;
 
@@ -222,7 +229,7 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, windowSize.x, windowSize.y);
 
-        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
+        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix();
 
         glm::vec3 cameraPos = viewCamera.cameraPos();
 
@@ -235,9 +242,10 @@ int main()
             .cameraPosition = &cameraPos,
             .lightCount = lightCount,
         };
-        
+
         int currentOffset = 0;
-        for (int i = 0; i < directionalLights.size(); i++) {
+        for (int i = 0; i < directionalLights.size(); i++)
+        {
             context.lightDirections[currentOffset] = directionalLights[i]->direction;
             context.lightColors[currentOffset] = directionalLights[i]->color;
             context.lightMvps[currentOffset] = directionalLights[i]->mvp;
@@ -247,7 +255,8 @@ int main()
             currentOffset++;
         }
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightDirections[currentOffset] = spotLights[i]->direction;
             context.lightPositions[currentOffset] = spotLights[i]->position;
             context.lightColors[currentOffset] = spotLights[i]->color;
@@ -259,7 +268,8 @@ int main()
             currentOffset++;
         }
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightEnabled[spotLightOffset + i] = 0;
         }
 
@@ -268,7 +278,7 @@ int main()
 
         earthDrawer.draw(&context);
 
-        moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
+        moonDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
         moonDrawer.draw(&context);
 
         sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
@@ -277,13 +287,13 @@ int main()
         skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
         skyboxDrawer.draw(&context);
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightEnabled[spotLightOffset + i] = 1;
         }
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
-
 
         // render ship
         glm::mat4x4 shipTransform = glm::mat4(1.0f);
@@ -294,19 +304,22 @@ int main()
         glm::vec3 f = viewCamera.m_forward;
         glm::vec3 u = viewCamera.m_up;
         glm::vec3 r = viewCamera.m_right;
-        glm::mat4 rotation{ r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1 };
+        glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
         shipTransform *= rotation;
-        
+
         spaceshipDrawer.transformation = shipTransform;
-        
 
         // render asteroids
-        for (auto asteroid : asteroidManager.asteroids) {
-            asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
-            asteroidDrawer.draw(&context);
+        for (auto asteroid : asteroidManager.asteroids)
+        {
+            MeshDrawer *drawer = asteroid->isEasterEgg ? &asteroidEasterEggDrawer : &asteroidDrawer;
+
+            drawer->transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+            drawer->draw(&context);
         }
 
-        for (auto drawer : meshes) {
+        for (auto drawer : meshes)
+        {
             drawer->draw(&context);
         }
 
