@@ -26,6 +26,7 @@ namespace shaders
   {
     generic.shader = ShaderBuilder()
                         .addStage(GL_VERTEX_SHADER, constants::SHADER_DIR + "shader_vert.glsl")
+                        .addStage(GL_GEOMETRY_SHADER, constants::SHADER_DIR + "generic_geom.glsl")
                         .addStage(GL_FRAGMENT_SHADER, constants::SHADER_DIR + "generic_frag.glsl")
                         .build();
 
@@ -42,6 +43,7 @@ namespace shaders
     saveShaderVar(&generic, "lightPosition");
     saveShaderVar(&generic, "lightColors");
     saveShaderVar(&generic, "lightEnabled");
+    saveShaderVar(&generic, "lightDistances");
     saveShaderVar(&generic, "lightMVPs");
     saveShaderVar(&generic, "lightShadowMaps");
     
@@ -51,6 +53,10 @@ namespace shaders
     saveShaderVar(&generic, "shadowTexture");
     saveShaderVar(&generic, "useOverlayTexture");
     saveShaderVar(&generic, "overlayTexture");
+    saveShaderVar(&generic, "useNormalTexture");
+    saveShaderVar(&generic, "normalTexture");
+    saveShaderVar(&generic, "useSpecularTexture");
+    saveShaderVar(&generic, "specularTexture");
     saveShaderVar(&generic, "useShadows");
     saveShaderVar(&generic, "useLights");
     saveShaderVar(&generic, "toonUsage");
@@ -59,6 +65,7 @@ namespace shaders
     saveShaderVar(&generic, "mvp");
     saveShaderVar(&generic, "transformation");
     saveShaderVar(&generic, "normalTransformation");
+    saveShaderVar(&generic, "lightShadowPixelSize");
 
     shadow.shader = ShaderBuilder()
                        .addStage(GL_VERTEX_SHADER, constants::SHADER_DIR + "shader_vert.glsl")

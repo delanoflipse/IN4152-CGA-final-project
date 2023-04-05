@@ -1,4 +1,5 @@
-#include "camera.h"
+#pragma once
+
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
@@ -25,6 +26,8 @@ DISABLE_WARNINGS_POP()
 #include "util/texture2D.cpp"
 #include "util/clock.cpp"
 #include "util/constants.cpp"
+#include "util/intersection.cpp"
+#include "gamestate.cpp"
 #include "lights/directionalLight.cpp"
 #include "lights/spotLight.cpp"
 #include "lights/shadowMap.cpp"
@@ -33,16 +36,18 @@ DISABLE_WARNINGS_POP()
 #include "materials/genericMaterial.cpp"
 #include "shaders/shaders.cpp"
 
+#include "camera.h"
+#include "camera.cpp"
+
 // Configuration
-const int WIDTH = 1080;
-const int HEIGHT = 720;
+const int WIDTH = 1920;
+const int HEIGHT = 1080;
 
 const std::string WINDOW_TITLE = "Group 8";
 
 int main()
 {
     Window window{WINDOW_TITLE, glm::ivec2(WIDTH, HEIGHT), OpenGLVersion::GL45};
-    window.setMouseCapture(true);
 
     // Key handle function
     window.registerKeyCallback([&](
@@ -54,22 +59,39 @@ int main()
         }
         default:
             break;
-        }
-    });
+        } });
 
     Camera viewCamera{&window, glm::vec3(0.f, .0f, .0f), glm::vec3(0.0f, 0.0f, -1.0f)};
-    viewCamera.initialInput();
 
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
+    // lights::DirectionalLight earthLight(glm::vec4(0.47451f, 0.52549f, 0.61176f, 1.0f), glm::normalize(glm::vec3(0.f, 0.f, -1.f)));
     std::vector directionalLights = {&sunlight};
 
-    lights::SpotLight platformSpotlight(glm::vec4(1.0f), glm::vec3(0.01, 2, 0),  glm::vec3(-0.01, -1, 0), glm::pi<float>() / 8.0f, 4.0f);
+    float platformScale = 2.0f;
 
-    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0),  glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
+    lights::SpotLight platformSpotlight1(
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(-0.8575f, 0.9289f, 0.0f),
+        glm::vec3(0.8575f, -0.9289f, 0.0f),
+        glm::pi<float>() / 4.0f, 8.0f);
 
-    std::vector spotLights = {&platformSpotlight, &shipSpotlight};
+    lights::SpotLight platformSpotlight2(
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(0.4284f, 0.9289f, -0.7424f),
+        glm::vec3(-0.4284f, -0.9289f, 0.7424f),
+        glm::pi<float>() / 4.0f, 8.0f);
 
-    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight, &sunlight};
+    lights::SpotLight platformSpotlight3(
+        glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
+        platformScale * glm::vec3(0.4284f, 0.9289f, 0.7424f),
+        glm::vec3(-0.4284f, -0.9289f, -0.7424f),
+        glm::pi<float>() / 4.0f, 8.0f);
+
+    lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 32.0f);
+
+    std::vector spotLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &shipSpotlight};
+
+    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight};
 
     const float pi = glm::pi<float>();
     const float pi2 = pi / 2;
@@ -78,29 +100,36 @@ int main()
     shaders::loadShaders();
 
     // === Load textures ===
-    util::Textured2D rockTexture("resources/rocks.jpg");
+    util::Textured2D rockTexture("resources/textures/rocks.jpg");
     // util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap.jpg");
     util::Textured2D earthDayTexture("resources/textures/2k_earth_daymap_with_clouds.jpg");
     util::Textured2D earthNightTexture("resources/textures/2k_earth_nightmap.jpg");
     util::Textured2D moonTexture("resources/textures/2k_moon.jpg");
+    util::Textured2D earthNormalTexture("resources/textures/2k_earth_normal_map.png");
+    util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
-    util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
+    util::Textured2D spaceshipTexture("resources/textures/gold.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
     util::Textured2D toonMap("resources/textures/toon_map.png");
-    // util::Textured2D sunTexture("resources/textures/2k_sun.jpg");
+
+    util::Textured2D metalNormalMap("resources/textures/metal_norm.jpg");
+    util::Textured2D metalSpecularMap("resources/textures/metal_spec.jpg");
+    util::Textured2D metalDiffuseMap("resources/textures/metal_tex.jpg");
 
     // === Load meshes  ===
-    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/asteroid.obj"));
-    Mesh sphere1 = mergeMeshes(loadMesh("resources/unit_uv_sphere.obj"));
-    Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/spaceship.obj"));
-    Mesh platformMesh = mergeMeshes(loadMesh("resources/platform.obj"));
+    Mesh asteroidMesh = mergeMeshes(loadMesh("resources/models/asteroid.obj"));
+    Mesh sphere1 = mergeMeshes(loadMesh("resources/models/unit_uv_sphere.obj"));
+    Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/models/spaceship.obj"));
+    Mesh platformMesh = mergeMeshes(loadMesh("resources/models/platform.obj"));
+    Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
     Mesh spaceshipAnimation[200];
     
     for (int i = 0; i < 200; i++) {
         spaceshipAnimation[i] = mergeMeshes(loadMesh("resources/spaceship_animation/spaceshipanim" + std::to_string(i+1) + ".obj"));
     }
+  
     // Mesh sphere1 = shapes::uv_unit_sphere(64, 64);
     // Mesh mesh = mergeMeshes(loadMesh("resources/sceneWithBox.obj"));
 
@@ -108,7 +137,6 @@ int main()
     asteroidMaterial.toonTexture = &toonMap;
     asteroidMaterial.diffuseTexture = &rockTexture;
     asteroidMaterial.shininess = 64;
-    // asteroidMaterial.toonUsage = 0.5f;
 
     materials::GenericMaterial shipMaterial;
     shipMaterial.toonTexture = &toonMap;
@@ -120,7 +148,9 @@ int main()
     materials::GenericMaterial earthMaterial;
     earthMaterial.diffuseTexture = &earthDayTexture;
     earthMaterial.shadowTexture = &earthNightTexture;
-    earthMaterial.shininess = 0;
+    earthMaterial.normalTexture = &earthNormalTexture;
+    earthMaterial.specularTexture = &earthSpecularTexture;
+    earthMaterial.shininess = 32;
     earthMaterial.useShadows = false;
 
     materials::GenericMaterial moonMaterial;
@@ -141,17 +171,26 @@ int main()
     skyboxMaterial.useShadows = false;
 
     materials::GenericMaterial platformMaterial;
-    platformMaterial.diffuseColor = glm::vec4(.8f, .8f, .8f, 1.0f);
+    platformMaterial.diffuseTexture = &metalDiffuseMap;
+    platformMaterial.normalTexture = &metalNormalMap;
+    platformMaterial.specularTexture = &metalSpecularMap;
     platformMaterial.shininess = 256;
 
-    MeshDrawer earthDrawer (&sphere1, &earthMaterial);
-    MeshDrawer moonDrawer (&sphere1, &moonMaterial);
-    MeshDrawer sunDrawer (&sphere1, &sunMaterial);
-    MeshDrawer skyboxDrawer (&sphere1, &skyboxMaterial);
+    MeshDrawer earthDrawer(&sphere1, &earthMaterial);
+    MeshDrawer moonDrawer(&sphere1, &moonMaterial);
+    MeshDrawer sunDrawer(&sphere1, &sunMaterial);
+    MeshDrawer skyboxDrawer(&sphere1, &skyboxMaterial);
 
-    MeshDrawer asteroidDrawer (&asteroidMesh, &asteroidMaterial);
+    MeshDrawer asteroidDrawer(&asteroidMesh, &asteroidMaterial);
+    MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
+    MeshDrawer spaceshipDrawer(&spaceshipMesh, &shipMaterial);
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
-
+    platformDrawer.transformation = glm::scale(
+        glm::translate(
+            glm::mat4(1.0f),
+            glm::vec3(0.0f, -2.0f, 0.0f)),
+        glm::vec3(platformScale));
+  
     MeshDrawer spaceshipDrawer(&spaceshipAnimation[0], &shipMaterial);
     std::vector spaceshipAnimationDrawers{ &spaceshipDrawer };
 
@@ -160,14 +199,13 @@ int main()
         spaceshipAnimationDrawers.push_back(tempSpaceshipDrawer);
     }
 
-    platformDrawer.transformation = glm::translate(glm::mat4(1.0f), glm::vec3(0, -1.5, 0));
-
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
-    
-    entities::AsteroidManager asteroidManager;
-    
-    std::vector meshes { spaceshipAnimationDrawers[0], & platformDrawer};
 
+    entities::AsteroidManager asteroidManager;
+    std::vector meshes { spaceshipAnimationDrawers[0], &platformDrawer};
+
+    window.setMouseCapture(true);
+    viewCamera.initialInput();
     timing::start();
     int updateFrame = 0, animationFrame = 0;
 
@@ -178,7 +216,28 @@ int main()
         viewCamera.updateInput();
         timing::update();
 
-        asteroidManager.update();
+        asteroidManager.update(viewCamera.m_position);
+
+        bool shooting = window.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+        if (shooting)
+        {
+            asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+        }
+
+        bool hitByAsteroid = asteroidManager.hitBy(viewCamera.m_position, 1.0f);
+        if (hitByAsteroid)
+        {
+            viewCamera.reset();
+            gamestate::hits++;
+        }
+
+        // float sunRotation = timing::time_s * 2.0f;
+        float sunRotation = 0.0f;
+        glm::mat4 rotationMat = glm::rotate(glm::mat4(1.0f), glm::radians(sunRotation), glm::vec3(0.0, 0.0, 1.0));
+        glm::vec4 baseDirection = glm::vec4(-1.f, 0.2f, 0.f, 1.0);
+        glm::vec4 rotated = rotationMat * baseDirection;
+        glm::vec3 normalRotated = glm::normalize(glm::vec3(rotated.x, rotated.y, rotated.z) / rotated.w);
+        sunlight.direction = normalRotated;
 
         if (updateFrame++ % 10 == 0) {
             meshes[0] = spaceshipAnimationDrawers[animationFrame++];
@@ -188,15 +247,16 @@ int main()
         glm::ivec2 windowSize = window.getWindowSize();
         float aspectRatio = window.getAspectRatio();
 
-        shipSpotlight.direction = viewCamera.m_forward + viewCamera.m_up * 0.2f;
+        shipSpotlight.direction = viewCamera.m_forward;
         shipSpotlight.position = viewCamera.m_position + viewCamera.m_forward * 0.05f;
 
         // const glm::mat4 model { 1.0f };
         const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
         // === Render shadow maps ===
-        for (auto light : lights) {
-            light->shadowMap.enablePass();
+        for (auto light : lights)
+        {
+            light->shadowMap->enablePass();
             // Clear the shadow map and set needed options
             glClearDepth(1.0f);
             glClear(GL_DEPTH_BUFFER_BIT);
@@ -206,26 +266,31 @@ int main()
             shaders::shadow.shader.bind();
 
             // Set viewport size
-            glViewport(0, 0, light->shadowMap.resolution, light->shadowMap.resolution);
-            
+            glViewport(0, 0, light->shadowMap->resolution, light->shadowMap->resolution);
+
             light->updateMvp();
             const glm::mat4 shadowMvp = light->mvp;
             glUniformMatrix4fv(shaders::shadow.vars["mvp"], 1, GL_FALSE, glm::value_ptr(shadowMvp));
 
-            for (auto asteroid : asteroidManager.asteroids) {
-                asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
-                asteroidDrawer.shadow();
+            for (auto asteroid : asteroidManager.asteroids)
+            {
+                MeshDrawer *drawer = asteroid->isEasterEgg ? &asteroidEasterEggDrawer : &asteroidDrawer;
+
+                drawer->transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+                drawer->shadow();
             }
 
-            for (auto drawer : meshes) {
-                if (!drawer->castShadow) {
+            for (auto drawer : meshes)
+            {
+                if (!drawer->castShadow)
+                {
                     continue;
                 }
 
                 drawer->shadow();
             }
         }
-        
+
         // window.swapBuffers();
         // continue;
 
@@ -238,7 +303,7 @@ int main()
         glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, windowSize.x, windowSize.y);
 
-        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix(); 
+        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix();
 
         glm::vec3 cameraPos = viewCamera.cameraPos();
 
@@ -251,40 +316,49 @@ int main()
             .cameraPosition = &cameraPos,
             .lightCount = lightCount,
         };
-        
+
         int currentOffset = 0;
-        for (int i = 0; i < directionalLights.size(); i++) {
+        for (int i = 0; i < directionalLights.size(); i++)
+        {
             context.lightDirections[currentOffset] = directionalLights[i]->direction;
             context.lightColors[currentOffset] = directionalLights[i]->color;
             context.lightMvps[currentOffset] = directionalLights[i]->mvp;
-            context.lightShadowMaps[currentOffset] = &(directionalLights[i]->shadowMap);
+            context.lightShadowMaps[currentOffset] = directionalLights[i]->shadowMap;
             context.lightTypes[currentOffset] = 0;
             context.lightEnabled[currentOffset] = directionalLights[i]->active;
             currentOffset++;
         }
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightDirections[currentOffset] = spotLights[i]->direction;
             context.lightPositions[currentOffset] = spotLights[i]->position;
             context.lightColors[currentOffset] = spotLights[i]->color;
             context.lightMvps[currentOffset] = spotLights[i]->mvp;
-            context.lightShadowMaps[currentOffset] = &(spotLights[i]->shadowMap);
+            context.lightShadowMaps[currentOffset] = spotLights[i]->shadowMap;
             context.lightTypes[currentOffset] = 1;
             context.lightEnabled[currentOffset] = spotLights[i]->active;
+            context.lightDistances[currentOffset] = spotLights[i]->distance;
 
             currentOffset++;
         }
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightEnabled[spotLightOffset + i] = 0;
         }
 
         // draw earth, moon and sun
-        earthDrawer.transformation = glm::rotate(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f)), pi, glm::vec3(1, 0, 0));
+        
+        float earthRotation = timing::time_s * 0.2f;
+        glm::mat4 earthTranslation = glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(0, 0, -10.0f));
+        glm::mat4 earthScaled = glm::scale(earthTranslation, glm::vec3(2.0f));
+        glm::mat4 earthCorrectRotation = glm::rotate(earthScaled, pi, glm::vec3(1, 0, 0));
+        earthDrawer.transformation = glm::rotate(earthCorrectRotation, earthRotation, glm::vec3(0, 1, 0));
 
         earthDrawer.draw(&context);
 
-        moonDrawer.transformation =  glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-1.3f, 1.8f, -10.0f)), glm::vec3(0.27));
+        moonDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + glm::vec3(-2.6f, 3.2f, -10.0f)), glm::vec3(0.54));
         moonDrawer.draw(&context);
 
         sunDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos + sunlight.direction), glm::vec3(0.02));
@@ -293,13 +367,13 @@ int main()
         skyboxDrawer.transformation = glm::scale(glm::translate(glm::mat4(1.0f), cameraPos), glm::vec3(20.0f));
         skyboxDrawer.draw(&context);
 
-        for (int i = 0; i < spotLights.size(); i++) {
+        for (int i = 0; i < spotLights.size(); i++)
+        {
             context.lightEnabled[spotLightOffset + i] = 1;
         }
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
-
 
         // render ship
         glm::mat4x4 shipTransform = glm::mat4(1.0f);
@@ -310,19 +384,65 @@ int main()
         glm::vec3 f = viewCamera.m_forward;
         glm::vec3 u = viewCamera.m_up;
         glm::vec3 r = viewCamera.m_right;
-        glm::mat4 rotation{ r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1 };
+        glm::mat4 rotation{r.x, r.y, r.z, 0, u.x, u.y, u.z, 0, f.x, f.y, f.z, 0, 0, 0, 0, 1};
         shipTransform *= rotation;
-        
+      
         meshes[0]->transformation = shipTransform;
 
         // render asteroids
-        for (auto asteroid : asteroidManager.asteroids) {
-            asteroidDrawer.transformation = asteroid->currentTransformation * asteroid->baseTransformation;
-            asteroidDrawer.draw(&context);
+        for (auto asteroid : asteroidManager.asteroids)
+        {
+            MeshDrawer *drawer = asteroid->isEasterEgg ? &asteroidEasterEggDrawer : &asteroidDrawer;
+
+            drawer->transformation = asteroid->currentTransformation * asteroid->baseTransformation;
+            drawer->draw(&context);
         }
 
-        for (auto drawer : meshes) {
+        for (auto drawer : meshes)
+        {
             drawer->draw(&context);
+        }
+
+        // === DRAW GUI ===
+        ImDrawList *drawList = ImGui::GetForegroundDrawList();
+
+        drawList->AddCircle(
+            ImVec2(windowSize.x / 2.0f, windowSize.y / 2.0f),
+            4,
+            IM_COL32_WHITE,
+            16);
+
+        std::string scorestring = std::string("Score: ") + std::to_string(gamestate::score);
+
+        std::string missedstring = std::string("Missed: ") + std::to_string(gamestate::missed);
+
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 50),
+            IM_COL32_WHITE,
+            scorestring.c_str());
+
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 70),
+            IM_COL32_WHITE,
+            missedstring.c_str());
+
+        for (auto asteroid : asteroidManager.asteroids)
+        {
+            glm::vec4 toScreenSpace = mvp * glm::vec4(asteroid->currentPosition, 1.0f);
+            glm::vec3 convertReal = math::vec4toVec3(toScreenSpace);
+            glm::vec3 screenPosition = convertReal * 0.5f + 0.5f;
+            float xpos = std::clamp(screenPosition.x, 0.0f, 1.0f);
+            float ypos = 1.0f - std::clamp(screenPosition.y, 0.0f, 1.0f);
+
+            drawList->AddCircle(
+                ImVec2(windowSize.x * xpos, windowSize.y * ypos),
+                8,
+                IM_COL32(255, 0, 0, 128),
+                6);
         }
 
         // ImGui::ShowMetricsWindow();

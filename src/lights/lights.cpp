@@ -12,8 +12,9 @@ namespace lights
   {
   public:
     glm::mat4 mvp;
-    ShadowMap shadowMap;
+    ShadowMap * shadowMap = NULL;
     bool active = true;
+    float distance = 0;
 
     virtual void updateMvp() = 0;
   };

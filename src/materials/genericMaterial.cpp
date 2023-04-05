@@ -25,6 +25,8 @@ namespace materials
     bool useLights = true;
 
     util::Textured2D *overlayTexture = NULL;
+    util::Textured2D *normalTexture = NULL;
+    util::Textured2D *specularTexture = NULL;
     util::Textured2D *diffuseTexture = NULL;
     util::Textured2D *shadowTexture = NULL;
     util::Textured2D *toonTexture = NULL;
@@ -54,12 +56,14 @@ namespace materials
       glUniform3fv(shaders::generic.vars["lightDirections"], MAX_LIGHTS, glm::value_ptr(context->lightDirections[0]));
       glUniform3fv(shaders::generic.vars["lightPosition"], MAX_LIGHTS, glm::value_ptr(context->lightPositions[0]));
       glUniform4fv(shaders::generic.vars["lightColors"], MAX_LIGHTS, glm::value_ptr(context->lightColors[0]));
+      glUniform1fv(shaders::generic.vars["lightDistances"], MAX_LIGHTS, context->lightDistances);
 
       int uniformShadowMap = shaders::generic.vars["lightShadowMaps"];
       for (int i = 0; i < context->lightCount; i++)
       {
         context->lightShadowMaps[i]->bindUniform(uniformShadowMap + i);
         glUniformMatrix4fv(shaders::generic.vars["lightMVPs"] + i, 1, GL_FALSE, glm::value_ptr(context->lightMvps[i]));
+        glUniform1f(shaders::generic.vars["lightShadowPixelSize"] + i, 1.0f / context->lightShadowMaps[i]->resolution);
       }
 
       // set material values
@@ -108,6 +112,26 @@ namespace materials
       else
       {
         glUniform1f(shaders::generic.vars["toonUsage"], 0.0f);
+      }
+
+      if (normalTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useNormalTexture"], 1);
+        normalTexture->bindUniform(shaders::generic.vars["normalTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useNormalTexture"], 0);
+      }
+
+      if (specularTexture != NULL)
+      {
+        glUniform1i(shaders::generic.vars["useSpecularTexture"], 1);
+        specularTexture->bindUniform(shaders::generic.vars["specularTexture"]);
+      }
+      else
+      {
+        glUniform1i(shaders::generic.vars["useSpecularTexture"], 0);
       }
     }
   };

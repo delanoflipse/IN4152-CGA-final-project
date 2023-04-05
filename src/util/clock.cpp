@@ -1,4 +1,5 @@
 #pragma once
+
 #include <chrono>
 #include <ctime>
 
@@ -13,7 +14,7 @@ namespace timing
   void start() {
     start_time = std::chrono::system_clock::now();
     last_time = start_time;
-  };
+  }
 
   void update()
   {
@@ -24,5 +25,5 @@ namespace timing
     delta_s = delta_since.count();
 
     last_time = now;
-  };
-};
+  }
+}

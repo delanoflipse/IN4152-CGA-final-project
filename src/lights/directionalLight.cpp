@@ -19,11 +19,12 @@ namespace lights
     {
       color = col;
       direction = dir;
-      float maxDim = 100.0f;
+      float maxDim = 50.0f;
       
       glm::mat4 view = glm::lookAt(glm::vec3(0), dir, glm::vec3(0, 1, 0));
       glm::mat4 projection = glm::ortho(-maxDim, maxDim, -maxDim, maxDim, -maxDim, maxDim);
-
+      shadowMap = new ShadowMap(4096);
+      
       mvp = view * projection;
     }
 
