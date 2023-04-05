@@ -15,7 +15,7 @@ else()
 	add_subdirectory("../../../framework/" "${CMAKE_BINARY_DIR}/framework/")
 endif()
 
-add_executable(Group8FinalProject "src/main.cpp" "src/camera.cpp")
+add_executable(Group8FinalProject "src/main.cpp")
 target_compile_features(Group8FinalProject PRIVATE cxx_std_20)
 target_link_libraries(Group8FinalProject PRIVATE CGFramework)
 enable_sanitizers(Group8FinalProject)

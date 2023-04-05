@@ -1,4 +1,5 @@
-#include "camera.h"
+#pragma once
+
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
@@ -32,6 +33,9 @@ DISABLE_WARNINGS_POP()
 #include "entities/AsteroidManager.cpp"
 #include "materials/genericMaterial.cpp"
 #include "shaders/shaders.cpp"
+
+#include "camera.h"
+#include "camera.cpp"
 
 // Configuration
 const int WIDTH = 1080;
