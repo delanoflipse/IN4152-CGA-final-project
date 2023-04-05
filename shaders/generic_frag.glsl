@@ -1,7 +1,7 @@
 #version 430
 
 #define MAX_LIGHTS 8
-#define LIGHT_SAMPLES 2
+#define LIGHT_SAMPLES 6
 // #define DEBUG_NORMAL
 // #define DEBUG_SHADOW
 // #define DEBUG_SHADOW_MAP
