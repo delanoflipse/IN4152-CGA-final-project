@@ -139,7 +139,7 @@ void main()
     usedNormal = TBN * mapNormal;
   }
 
-  if (useSpecularTexture) {
+  if (useSpecularTexture == 1) {
     fragSpecularColor = texture(specularTexture, fragment.uv);
   }
 
