@@ -1,5 +1,7 @@
 #pragma once
 
+#define GLM_FORCE_SWIZZLE
+
 // Suppress warnings in third-party code.
 #include <framework/disable_all_warnings.h>
 DISABLE_WARNINGS_PUSH()
@@ -26,6 +28,8 @@ DISABLE_WARNINGS_POP()
 #include "util/texture2D.cpp"
 #include "util/clock.cpp"
 #include "util/constants.cpp"
+#include "util/intersection.cpp"
+#include "gamestate.cpp"
 #include "lights/directionalLight.cpp"
 #include "lights/spotLight.cpp"
 #include "lights/shadowMap.cpp"
@@ -38,8 +42,8 @@ DISABLE_WARNINGS_POP()
 #include "camera.cpp"
 
 // Configuration
-const int WIDTH = 1080;
-const int HEIGHT = 720;
+const int WIDTH = 1920;
+const int HEIGHT = 1080;
 
 const std::string WINDOW_TITLE = "Group 8";
 
@@ -62,37 +66,34 @@ int main()
     Camera viewCamera{&window, glm::vec3(0.f, .0f, .0f), glm::vec3(0.0f, 0.0f, -1.0f)};
 
     lights::DirectionalLight sunlight(glm::vec4(1.0f), glm::normalize(glm::vec3(-1.f, 0.2f, 0.f)));
-    std::vector directionalLights = {&sunlight};
-    
+    lights::DirectionalLight earthLight(glm::vec4(0.47451f, 0.52549f, 0.61176f, 1.0f), glm::normalize(glm::vec3(0.f, 0.f, -1.f)));
+    std::vector directionalLights = {&sunlight, &earthLight};
+
     float platformScale = 2.0f;
 
-    lights::SpotLight platformSpotlight1 (
+    lights::SpotLight platformSpotlight1(
         glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
         platformScale * glm::vec3(-0.8575f, 0.9289f, 0.0f),
-        glm::vec3(0.8575f, -0.9289f,  0.0f),
-        glm::pi<float>() / 4.0f, 8.0f
-    );
+        glm::vec3(0.8575f, -0.9289f, 0.0f),
+        glm::pi<float>() / 4.0f, 8.0f);
 
-    lights::SpotLight platformSpotlight2 (
+    lights::SpotLight platformSpotlight2(
         glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
         platformScale * glm::vec3(0.4284f, 0.9289f, -0.7424f),
         glm::vec3(-0.4284f, -0.9289f, 0.7424f),
-        glm::pi<float>() / 4.0f, 8.0f
-    );
+        glm::pi<float>() / 4.0f, 8.0f);
 
-    lights::SpotLight platformSpotlight3 (
+    lights::SpotLight platformSpotlight3(
         glm::vec4(0.5f, 0.5f, 0.5f, 1.0f),
         platformScale * glm::vec3(0.4284f, 0.9289f, 0.7424f),
         glm::vec3(-0.4284f, -0.9289f, -0.7424f),
-        glm::pi<float>() / 4.0f, 8.0f
-    );
-
+        glm::pi<float>() / 4.0f, 8.0f);
 
     lights::SpotLight shipSpotlight(glm::vec4(1.0f), glm::vec3(0), glm::vec3(0), glm::pi<float>() / 8.0f, 10.0f);
 
     std::vector spotLights = {&platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &shipSpotlight};
 
-    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight};
+    std::vector<lights::Light *> lights = {&shipSpotlight, &platformSpotlight1, &platformSpotlight2, &platformSpotlight3, &sunlight, &earthLight};
 
     const float pi = glm::pi<float>();
     const float pi2 = pi / 2;
@@ -109,7 +110,7 @@ int main()
     util::Textured2D earthNormalTexture("resources/textures/2k_earth_normal_map.png");
     util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
-    util::Textured2D spaceshipTexture("resources/textures/gold.jpg"); 
+    util::Textured2D spaceshipTexture("resources/textures/gold.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg");
@@ -180,10 +181,8 @@ int main()
     platformDrawer.transformation = glm::scale(
         glm::translate(
             glm::mat4(1.0f),
-            glm::vec3(0.0f, -2.0f, 0.0f)
-        ),
-        glm::vec3(platformScale)
-    );
+            glm::vec3(0.0f, -2.0f, 0.0f)),
+        glm::vec3(platformScale));
 
     // MeshDrawer debugSphereDrawer(&sphere1, &platformMaterial);
 
@@ -193,8 +192,8 @@ int main()
 
     glm::mat4 shipRotationMatrix{0};
 
-    viewCamera.initialInput();
     window.setMouseCapture(true);
+    viewCamera.initialInput();
     timing::start();
 
     // Main loop
@@ -205,6 +204,12 @@ int main()
         timing::update();
 
         asteroidManager.update();
+
+        bool shooting = window.isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+        if (shooting)
+        {
+            asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+        }
 
         // float sunRotation = timing::time_s * 2.0f;
         float sunRotation = 0.0f;
@@ -369,6 +374,48 @@ int main()
         for (auto drawer : meshes)
         {
             drawer->draw(&context);
+        }
+
+        // === DRAW GUI ===
+        ImDrawList *drawList = ImGui::GetForegroundDrawList();
+
+        drawList->AddCircle(
+            ImVec2(windowSize.x / 2.0f, windowSize.y / 2.0f),
+            4,
+            IM_COL32_WHITE,
+            16);
+
+        std::string scorestring = std::string("Score: ") + std::to_string(gamestate::score);
+
+        std::string missedstring = std::string("Missed: ") + std::to_string(gamestate::missed);
+
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 50),
+            IM_COL32_WHITE,
+            scorestring.c_str());
+
+        drawList->AddText(
+            ImGui::GetFont(),
+            16,
+            ImVec2(50, 70),
+            IM_COL32_WHITE,
+            missedstring.c_str());
+
+        for (auto asteroid : asteroidManager.asteroids)
+        {
+            glm::vec4 toScreenSpace = mvp * glm::vec4(asteroid->currentPosition, 1.0f);
+            glm::vec3 convertReal = toScreenSpace.xyz * (1.0f / toScreenSpace.w);
+            glm::vec3 screenPosition = convertReal * 0.5f + 0.5f;
+            float xpos = std::clamp(screenPosition.x, 0.0f, 1.0f);
+            float ypos = 1.0f - std::clamp(screenPosition.y, 0.0f, 1.0f);
+
+            drawList->AddCircle(
+                ImVec2(windowSize.x * xpos, windowSize.y * ypos),
+                8,
+                IM_COL32(255, 0, 0, 128),
+                6);
         }
 
         // ImGui::ShowMetricsWindow();

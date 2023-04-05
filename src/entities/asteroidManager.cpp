@@ -4,6 +4,7 @@
 #include <glm/vec3.hpp>
 
 #include "../util/clock.cpp"
+#include "../gamestate.cpp"
 
 namespace entities
 {
@@ -37,6 +38,29 @@ namespace entities
 
         if (asteroid->progress >= 1)
         {
+          gamestate::missed++;
+          delete *iter;
+          iter = asteroids.erase(iter);
+        }
+        else
+        {
+          ++iter;
+        }
+      }
+    }
+
+    void shootAt(glm::vec3 from, glm::vec3 dir)
+    {
+
+      auto iter = asteroids.begin();
+      while (iter != asteroids.end())
+      {
+        entities::Asteroid *asteroid = *iter;
+        bool hit = math::raySphereIntersect(from, dir, asteroid->currentPosition, 1.0f);
+      
+        if (hit)
+        {
+          gamestate::score++;
           delete *iter;
           iter = asteroids.erase(iter);
         }

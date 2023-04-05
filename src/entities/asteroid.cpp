@@ -33,11 +33,13 @@ namespace entities
   {
   public:
     glm::mat4 baseTransformation;
+    glm::mat4 inverseBaseTransform;
     glm::mat4 currentTransformation;
 
     float speed;
     glm::vec3 spawnDirection;
     glm::vec3 targetDirection;
+    glm::vec3 currentPosition;
     float progress = 0.0f;
     bool isEasterEgg = false;
 
@@ -58,6 +60,10 @@ namespace entities
       baseTransformation = glm::mat4(1.0f);
       baseTransformation *= glm::rotate(glm::mat4(1.0f), rotation, rotAxis);
       baseTransformation *= glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, scaleZ));
+      
+      inverseBaseTransform = glm::inverse(
+        glm::scale(glm::mat4(1.0f), glm::vec3(scaleX, scaleY, scaleZ))
+      );
 
       spawnDirection = randomDirection();
       targetDirection = randomDirection();
@@ -68,14 +74,14 @@ namespace entities
     {
       float spawnRadius = 50.0f;
       // glm::vec3 direction = targetLocation - spawnLocation;
-      glm::vec3 position = math::cubicBezier(
+      currentPosition = math::cubicBezier(
         spawnDirection * spawnRadius,
         spawnDirection * spawnRadius * 0.15f,
         targetDirection * spawnRadius * 0.15f,
         targetDirection * spawnRadius,
         progress
       );
-      currentTransformation = glm::translate(glm::mat4(1.0f), position);
+      currentTransformation = glm::translate(glm::mat4(1.0f), currentPosition);
     }
   };
 };
