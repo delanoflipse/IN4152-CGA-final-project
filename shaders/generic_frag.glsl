@@ -1,10 +1,12 @@
 #version 430
 
 #define MAX_LIGHTS 8
-#define LIGHT_SAMPLES 1
+#define LIGHT_SAMPLES 2
 // #define DEBUG_NORMAL
-#define DEBUG_SHADOW_MAP
-#define PIXEL_SIZE 1 / 1024
+// #define DEBUG_SHADOW
+// #define DEBUG_SHADOW_MAP
+// #define DEBUG_SHADOW_MVP
+// #define DEBUG_SHADOW_SPOT
 
 //  ---- SCENE SPECIFIC ----
 // CAMERA
@@ -23,6 +25,8 @@ uniform vec3 lightDirections[MAX_LIGHTS];
 uniform vec3 lightPosition[MAX_LIGHTS];
 uniform vec4 lightColors[MAX_LIGHTS];
 uniform mat4 lightMVPs[MAX_LIGHTS];
+uniform float lightShadowPixelSize[MAX_LIGHTS];
+uniform float lightDistances[MAX_LIGHTS];
 uniform sampler2D lightShadowMaps[MAX_LIGHTS];
 
 //  ---- MESH SPECIFIC ----
@@ -133,10 +137,13 @@ void main()
 
     int lightType = lightTypes[i];
     vec3 lightDirection = lightDirections[i];
+    vec3 lightPosition = lightPosition[i];
+    vec3 fromPosToLight = lightPosition - fragment.position;
+    float lightFalloffDistance = lightDistances[i];
 
     // spotlight
     if (lightType == 1) {
-      lightDirection = normalize(lightPosition[i] - fragment.position);
+      lightDirection = normalize(lightPosition - fragment.position);
     }
 
     // base values
@@ -168,24 +175,27 @@ void main()
       //  we transform them to texture space (0 to 1).
       vec2 shadowMapCoord = asLightPosition.xy * 0.5 + 0.5;
 
-      float fragLightDepth = asLightPosition.z;
+      // float fragLightDepth = asLightPosition.z;
+      float fragLightDepth = asLightPosition.z * 0.5 + 0.5;
 
       bool insideShadowMap = fragLightDepth >= -1 && fragLightDepth <= 1;
       
       if (insideShadowMap) {
         float bias = 0;
         if (lightType == 1) {
-          // bias = 0.001;
-          // bias = max(0.00000025 * (1 - dot(fragment.normal, lightDirection)), 0.0000005);
+          bias = max(0.00025 * (1 - dot(fragment.normal, lightDirection)), 0.0005);
         } else {
-          bias = max(0.0025 * (1 - dot(fragment.normal, lightDirection)), 0.005);
+          bias = max(0.00025 * (1 - dot(fragment.normal, lightDirection)), 0.0005);
         }
 
         int samples = LIGHT_SAMPLES;
-        int totalSamples = (2 * samples + 1) * (2 * samples + 1);
+        int samplesPerAxis = (2 * samples + 1);
+        int totalSamples = samplesPerAxis * samplesPerAxis;
+        float pixelSize = lightShadowPixelSize[i];
+
         for (int y = -samples; y <= samples; y++) {
           for (int x = -samples; x <= samples; x++) {
-            vec2 shadowPos = shadowMapCoord + vec2(x * PIXEL_SIZE, y * PIXEL_SIZE);
+            vec2 shadowPos = shadowMapCoord + vec2(x * pixelSize, y * pixelSize);
 
             if (shadowPos.x > 1 || shadowPos.x < 0 || shadowPos.y > 1 || shadowPos.y < 0) {
               inShadow += 1;
@@ -193,8 +203,20 @@ void main()
             }
 
             float shadowMapDepth = texture(lightShadowMaps[i], shadowPos).x;
+
+            #ifdef DEBUG_SHADOW_MAP
+            outColor = vec4(vec3(abs(fragLightDepth - shadowMapDepth)), 1);
+            // outColor = vec4(vec3(bias), 1);
+            return;
+            #endif
+            
             if (fragLightDepth - bias >= shadowMapDepth) {
               inShadow += 1;
+              
+              #ifdef DEBUG_SHADOW
+              outColor = vec4(1,0,0, 1);
+              return;
+              #endif
             }
           }
         }
@@ -204,12 +226,23 @@ void main()
         if (lightType == 1) {
           // spotlight
           float coneDropoff = pow(2 * length(vec2(0.5, 0.5) - shadowMapCoord), 1.5);
-          // float linearDepth = 1 - 0.9 * (1 / (fragLightDepth * 0.5 + 0.5));
-          float linearDepth = 0;
-          float intensity = clamp(max(coneDropoff,linearDepth), 0, 1);
+          float distanceDropoff = lightFalloffDistance > 0
+            ? pow(length(lightPosition - fragment.position) / lightFalloffDistance, 1)
+            : 0;
+          #ifdef DEBUG_SHADOW_SPOT
+          outColor = vec4(vec3(linDepth), 1);
+          // outColor = vec4(vec3(bias), 1);
+          return;
+          #endif
+
+          float intensity = clamp(max(coneDropoff, distanceDropoff), 0, 1);
           inShadow = max(intensity, inShadow);
         }
         
+        #ifdef DEBUG_SHADOW_MVP
+        outColor = vec4(vec3(fragLightDepth * 0.5 + 0.5), 1);
+        return;
+        #endif
       } else {
         inShadow = 1;
       }
@@ -217,6 +250,13 @@ void main()
     }
 
     float shadowFactor = clamp(1 - inShadow, 0.0, 1.0);
+
+    #ifdef DEBUG_SHADOW
+    outColor = vec4(vec3(shadowFactor), 1);
+    return;
+    #endif
+    
+
     // TODO: now its x * ambient, which is incorrect
     float lightness = max(ambient, diffuse * shadowFactor);
     float specularness = specular * shadowFactor;

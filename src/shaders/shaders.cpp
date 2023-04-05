@@ -43,6 +43,7 @@ namespace shaders
     saveShaderVar(&generic, "lightPosition");
     saveShaderVar(&generic, "lightColors");
     saveShaderVar(&generic, "lightEnabled");
+    saveShaderVar(&generic, "lightDistances");
     saveShaderVar(&generic, "lightMVPs");
     saveShaderVar(&generic, "lightShadowMaps");
     
@@ -64,6 +65,7 @@ namespace shaders
     saveShaderVar(&generic, "mvp");
     saveShaderVar(&generic, "transformation");
     saveShaderVar(&generic, "normalTransformation");
+    saveShaderVar(&generic, "lightShadowPixelSize");
 
     shadow.shader = ShaderBuilder()
                        .addStage(GL_VERTEX_SHADER, constants::SHADER_DIR + "shader_vert.glsl")

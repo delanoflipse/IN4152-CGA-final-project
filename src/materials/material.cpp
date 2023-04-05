@@ -12,6 +12,7 @@ namespace materials
     // note: these are arrays
     int lightTypes[MAX_LIGHTS];
     int lightEnabled[MAX_LIGHTS];
+    float lightDistances[MAX_LIGHTS];
     glm::vec3 lightDirections[MAX_LIGHTS];
     glm::vec3 lightPositions[MAX_LIGHTS];
     glm::vec4 lightColors[MAX_LIGHTS];

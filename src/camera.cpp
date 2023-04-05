@@ -73,14 +73,14 @@ void Camera::initialInput()
 void Camera::updateInput()
 {
     float directionalAcceleration = 0.1f * timing::delta_s;
-    float maxMoveSpeed = m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT) ? 0.15f : 0.05f;
+    float maxMoveSpeed = 0.15f;
     float lookSpeed = 0.0035f;
 
     glm::vec3 acceleration = glm::vec3(0.0f);
     m_front_view = m_pWindow->isKeyPressed(GLFW_KEY_TAB);
 
     glm::vec3 localMoveDelta{0};
-    
+
     const glm::vec3 right = glm::normalize(glm::cross(m_forward, m_up));
     if (m_pWindow->isKeyPressed(GLFW_KEY_ESCAPE))
         m_pWindow->setMouseCapture(false);
@@ -92,9 +92,9 @@ void Camera::updateInput()
         acceleration += directionalAcceleration * m_forward;
     if (m_pWindow->isKeyPressed(GLFW_KEY_S))
         acceleration -= directionalAcceleration * m_forward;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_R))
+    if (m_pWindow->isKeyPressed(GLFW_KEY_R) || m_pWindow->isKeyPressed(GLFW_KEY_SPACE))
         acceleration += directionalAcceleration * m_up;
-    if (m_pWindow->isKeyPressed(GLFW_KEY_F))
+    if (m_pWindow->isKeyPressed(GLFW_KEY_F) || m_pWindow->isKeyPressed(GLFW_KEY_LEFT_SHIFT))
         acceleration -= directionalAcceleration * m_up;
     if (m_pWindow->isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
         m_zoom -= 0.05f;
