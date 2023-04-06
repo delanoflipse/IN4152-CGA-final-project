@@ -130,6 +130,7 @@ int main()
     util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map_2.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
     util::Textured2D spaceshipTexture("resources/textures/gold.jpg", true);
+    util::Textured2D fireTexture("resources/textures/1494.jpg", true);
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg", true);
@@ -212,8 +213,8 @@ int main()
     particleMaterial.shininess = 0.1f;
     particleMaterial.ambient = 0.0f;
     particleMaterial.transparency = 0.3f;
-    particleMaterial.specularTexture = &moonTexture;
-    particleMaterial.diffuseTexture = &moonTexture;
+    particleMaterial.specularTexture = &fireTexture;
+    particleMaterial.diffuseTexture = &fireTexture;
     particleMaterial.useShadows = false;
 
     MeshDrawer earthDrawer(&sphere1, &earthMaterial);
@@ -309,7 +310,7 @@ int main()
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
             int particleIndex = (int)random::randomRange(0, NUMOFPARTICLES);
             particles[particleIndex] = new Particle(-1, 50);
-            particles[particleIndex]->update(viewCamera.m_position + viewCamera.m_forward - viewCamera.m_up, viewCamera.m_forward, glm::vec3(0), glm::vec3(0), viewCamera.cameraPos());
+            particles[particleIndex]->update(viewCamera.m_position - viewCamera.m_up, viewCamera.m_forward + 0.2f* viewCamera.m_up, glm::vec3(0), glm::vec3(0), viewCamera.cameraPos());
             gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
