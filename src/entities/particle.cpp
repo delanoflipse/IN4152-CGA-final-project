@@ -63,7 +63,7 @@ public:
     //     cameradistance = camspace.z;
     // }
     
-    void update(glm::vec3 position, glm::vec3 back, glm::vec3 up, glm::vec3 right, glm::vec3 camerapos)
+    void update(glm::vec3 position, glm::vec3 back, glm::vec3 up, glm::vec3 right, glm::vec3 camerapos, float newspeed)
     {
         age++;
         if (age % lifetime == 0) {
@@ -71,7 +71,7 @@ public:
             float xoffset = random::randomRange(-0.1f, 0.1f);
             localPosition = position + yoffset*up + xoffset * right;
             direction = back;
-            // speed = initialSpeed;
+            speed = newspeed;
             age = 1;
         }
 

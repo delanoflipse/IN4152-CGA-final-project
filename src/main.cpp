@@ -319,8 +319,7 @@ int main()
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
             int particleIndex = 0;
             particles[particleIndex] = new Particle(-1, 50);
-            particles[particleIndex]->speed = 25.0f;
-            particles[particleIndex]->update(viewCamera.m_position - viewCamera.m_up, viewCamera.m_forward + 0.2f* viewCamera.m_up, glm::vec3(0), glm::vec3(0), cameraPos);
+            particles[particleIndex]->update(viewCamera.m_position - viewCamera.m_up, viewCamera.m_forward + 0.2f* viewCamera.m_up, glm::vec3(0), glm::vec3(0), cameraPos, 25.0f);
             gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
@@ -504,7 +503,7 @@ int main()
 
         for (Particle *p : particles) 
         {
-            p->update(viewCamera.m_position - viewCamera.m_forward - viewCamera.m_up , -viewCamera.m_forward, viewCamera.m_up, viewCamera.m_right, cameraPos);
+            p->update(viewCamera.m_position - viewCamera.m_forward - viewCamera.m_up , -viewCamera.m_forward, viewCamera.m_up, viewCamera.m_right, cameraPos, random::randomRange(2.0f, 3.2f));
         }
 
         std::sort(particles, particles + NUMOFPARTICLES - 1, 
