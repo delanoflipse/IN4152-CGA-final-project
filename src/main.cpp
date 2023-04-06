@@ -32,6 +32,7 @@ DISABLE_WARNINGS_POP()
 #include "lights/spotLight.cpp"
 #include "lights/shadowMap.cpp"
 #include "entities/asteroid.cpp"
+#include "entities/particle.cpp"
 #include "entities/AsteroidManager.cpp"
 #include "materials/genericMaterial.cpp"
 #include "shaders/shaders.cpp"
@@ -43,6 +44,7 @@ DISABLE_WARNINGS_POP()
 const int WIDTH = 1920;
 const int HEIGHT = 1080;
 
+const int NUMOFPARTICLES = 200;
 const int FRAMES = 200;
 const int SKIP_FRAMES = 8;
 const int ANIMATION_FPS = 30;
@@ -147,6 +149,7 @@ int main()
     Mesh spaceshipMesh = mergeMeshes(loadMesh("resources/models/spaceship.obj"));
     Mesh platformMesh = mergeMeshes(loadMesh("resources/models/platform.obj"));
     Mesh houseMesh = mergeMeshes(loadMesh("resources/models/house.obj"));
+    Mesh particleMesh = mergeMeshes(loadMesh("resources/models/quad.obj"));
     Mesh spaceshipAnimation[FRAMES];
 
     for (int i = 0; i < FRAMES; i += SKIP_FRAMES)
@@ -205,14 +208,23 @@ int main()
     platformMaterial.specularTexture = &metalSpecularMap;
     platformMaterial.shininess = 256;
 
+    materials::GenericMaterial particleMaterial;
+    particleMaterial.shininess = 0.1f;
+    particleMaterial.ambient = 0.0f;
+    particleMaterial.transparency = 0.3f;
+    particleMaterial.specularTexture = &moonTexture;
+    particleMaterial.diffuseTexture = &moonTexture;
+    particleMaterial.useShadows = false;
+
     MeshDrawer earthDrawer(&sphere1, &earthMaterial);
     MeshDrawer moonDrawer(&sphere1, &moonMaterial);
     MeshDrawer sunDrawer(&sphere1, &sunMaterial);
     MeshDrawer skyboxDrawer(&sphere1, &skyboxMaterial);
 
     MeshDrawer asteroidDrawer(&asteroidMesh, &asteroidMaterial);
-    MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial);
+    MeshDrawer asteroidEasterEggDrawer(&houseMesh, &asteroidMaterial); 
     MeshDrawer platformDrawer(&platformMesh, &platformMaterial);
+    MeshDrawer particleDrawer(&particleMesh, &particleMaterial);
     platformDrawer.transformation = glm::scale(
         glm::translate(
             glm::mat4(1.0f),
@@ -228,6 +240,15 @@ int main()
 
     entities::AsteroidManager asteroidManager;
     std::vector meshes{spaceshipAnimationDrawers[0], &platformDrawer};
+
+    Particle *particles[NUMOFPARTICLES];
+
+    for (int i = 0; i < NUMOFPARTICLES; i++) {
+        particles[i] = new Particle((30.0f / NUMOFPARTICLES) * i);
+    }
+
+    window.setMouseCapture(true);
+    viewCamera.initialInput();
 
     timing::start();
     int updateFrame = 0, animationFrame = 0;
@@ -286,6 +307,9 @@ int main()
         if (shooting && canshoot && !gamestate::paused)
         {
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+            int particleIndex = (int)random::randomRange(0, NUMOFPARTICLES);
+            particles[particleIndex] = new Particle(-1, 50);
+            particles[particleIndex]->update(viewCamera.m_position + viewCamera.m_forward - viewCamera.m_up, viewCamera.m_forward, glm::vec3(0), glm::vec3(0), viewCamera.cameraPos());
             gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
@@ -465,6 +489,23 @@ int main()
         {
             drawer->draw(&context);
         }
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glEnable(GL_BLEND);
+
+        //particle.update();
+        glm::mat4x4 particleTransform = glm::mat4(1.0f);
+
+        for (Particle *p : particles) 
+        {
+            p->update(viewCamera.m_position - viewCamera.m_forward - viewCamera.m_up , -viewCamera.m_forward, viewCamera.m_up, viewCamera.m_right, cameraPos);
+            particleTransform = glm::scale(glm::translate(glm::mat4(1.0f), p->localPosition), glm::vec3(p->scale));
+            particleTransform *= rotation;
+            particleDrawer.transformation = particleTransform;
+            particleDrawer.draw(&context);
+        }
+
+        std::sort(particles, particles + NUMOFPARTICLES - 1);
 
         // === DRAW GUI ===
         ImDrawList *drawList = ImGui::GetForegroundDrawList();

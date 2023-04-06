@@ -20,6 +20,7 @@ namespace materials
     float shininess = 1.0f;
     float ambient = 0.005f;
     float toonUsage = 0.0f;
+    float transparency = 1.0f;
 
     bool useShadows = true;
     bool useLights = true;
@@ -71,6 +72,7 @@ namespace materials
       glUniform3fv(shaders::generic.vars["specularColor"], 1, glm::value_ptr(specularColor));
       glUniform1f(shaders::generic.vars["shininess"], shininess);
       glUniform1f(shaders::generic.vars["ambient"], ambient);
+      glUniform1f(shaders::generic.vars["transparency"], transparency);
 
       glUniform1i(shaders::generic.vars["useShadows"], useShadows ? 1 : 0);
       glUniform1i(shaders::generic.vars["useLights"], useLights ? 1 : 0);
