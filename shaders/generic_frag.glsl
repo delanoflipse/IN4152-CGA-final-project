@@ -299,7 +299,7 @@ void main()
   float gamma = 2.2;
   finalColor.rgb = pow(finalColor.rgb, vec3(1.0/gamma));
 
-  finalColor.a = transparency;
+  finalColor.a = fragDiffuseColor.a;
 
   outColor = finalColor;
 }

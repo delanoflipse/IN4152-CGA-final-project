@@ -130,7 +130,9 @@ int main()
     util::Textured2D earthSpecularTexture("resources/textures/2k_earth_specular_map_2.jpg");
     // https://www.vecteezy.com/vector-art/19783578-pattern-with-geometric-elements-in-golden-yellow-tones-abstract-gradient-background
     util::Textured2D spaceshipTexture("resources/textures/gold.jpg", true);
-    util::Textured2D fireTexture("resources/textures/1494.jpg", true);
+    // util::Textured2D fireTexture("resources/textures/1494.jpg", true);
+    // util::Textured2D fireTexture("resources/textures/1494.jpg", true);
+    util::Textured2D fireTexture("resources/textures/fire2.png", false, true);
     // util::Textured2D skyMap("resources/textures/8k_stars.jpg");
     // util::Textured2D skyMap("resources/textures/8k_stars_milky_way.jpg");
     util::Textured2D skyMap("resources/textures/8k_stars_milky_way_darker.jpg", true);
@@ -210,11 +212,12 @@ int main()
     platformMaterial.shininess = 256;
 
     materials::GenericMaterial particleMaterial;
-    particleMaterial.shininess = 0.1f;
+    particleMaterial.shininess = 0.0f;
     particleMaterial.ambient = 0.0f;
     particleMaterial.transparency = 0.3f;
     particleMaterial.specularTexture = &fireTexture;
     particleMaterial.diffuseTexture = &fireTexture;
+    particleMaterial.useLights = false;
     particleMaterial.useShadows = false;
 
     MeshDrawer earthDrawer(&sphere1, &earthMaterial);
@@ -246,10 +249,9 @@ int main()
 
     for (int i = 0; i < NUMOFPARTICLES; i++) {
         particles[i] = new Particle((30.0f / NUMOFPARTICLES) * i);
+        particles[i]->speed = random::randomRange(2.0f, 3.2f);
+        particles[i]->initialSpeed = particles[i]->speed;
     }
-
-    window.setMouseCapture(true);
-    viewCamera.initialInput();
 
     timing::start();
     int updateFrame = 0, animationFrame = 0;
@@ -259,6 +261,13 @@ int main()
     {
         window.updateInput();
         viewCamera.updateInput();
+
+        glm::ivec2 windowSize = window.getWindowSize();
+        float aspectRatio = window.getAspectRatio();
+        glm::vec3 cameraPos = viewCamera.cameraPos();
+        
+        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
+        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix();
 
         timing::update();
 
@@ -308,9 +317,10 @@ int main()
         if (shooting && canshoot && !gamestate::paused)
         {
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
-            int particleIndex = (int)random::randomRange(0, NUMOFPARTICLES);
+            int particleIndex = 0;
             particles[particleIndex] = new Particle(-1, 50);
-            particles[particleIndex]->update(viewCamera.m_position - viewCamera.m_up, viewCamera.m_forward + 0.2f* viewCamera.m_up, glm::vec3(0), glm::vec3(0), viewCamera.cameraPos());
+            particles[particleIndex]->speed = 25.0f;
+            particles[particleIndex]->update(viewCamera.m_position - viewCamera.m_up, viewCamera.m_forward + 0.2f* viewCamera.m_up, glm::vec3(0), glm::vec3(0), cameraPos);
             gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
@@ -333,8 +343,6 @@ int main()
         int animationFrame = SKIP_FRAMES * int(animationProgress * (FRAMES - 1) / SKIP_FRAMES);
         meshes[0] = spaceshipAnimationDrawers[animationFrame];
 
-        glm::ivec2 windowSize = window.getWindowSize();
-        float aspectRatio = window.getAspectRatio();
 
         shipSpotlight.direction = viewCamera.m_forward;
         shipSpotlight.position = viewCamera.m_position + viewCamera.m_forward * 0.05f;
@@ -353,7 +361,6 @@ int main()
 
         meshes[0]->transformation = shipTransform;
         // const glm::mat4 model { 1.0f };
-        const glm::mat4 mainProjectionMatrix = glm::perspective(fov, aspectRatio, 0.1f, 100.0f);
 
         // === Render shadow maps ===
         for (auto light : lights)
@@ -405,10 +412,6 @@ int main()
         glDisable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         glViewport(0, 0, windowSize.x, windowSize.y);
-
-        glm::mat4 mvp = mainProjectionMatrix * viewCamera.viewMatrix();
-
-        glm::vec3 cameraPos = viewCamera.cameraPos();
 
         int dirLightOffset = 0;
         int spotLightOffset = directionalLights.size();
@@ -476,6 +479,7 @@ int main()
 
         // clear depth from skybox drawing
         glClear(GL_DEPTH_BUFFER_BIT);
+        glDisable(GL_BLEND);
 
         // render asteroids
         for (auto asteroid : asteroidManager.asteroids)
@@ -492,6 +496,7 @@ int main()
         }
 
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        // glBlendFunc(GL_SRC_COLOR, GL_ONE);
         glEnable(GL_BLEND);
 
         //particle.update();
@@ -500,13 +505,20 @@ int main()
         for (Particle *p : particles) 
         {
             p->update(viewCamera.m_position - viewCamera.m_forward - viewCamera.m_up , -viewCamera.m_forward, viewCamera.m_up, viewCamera.m_right, cameraPos);
+        }
+
+        std::sort(particles, particles + NUMOFPARTICLES - 1, 
+            [](Particle * a, Particle * b) {
+                return a->cameradistance > b->cameradistance;
+        });
+
+        for (Particle *p : particles) 
+        {
             particleTransform = glm::scale(glm::translate(glm::mat4(1.0f), p->localPosition), glm::vec3(p->scale));
             particleTransform *= rotation;
             particleDrawer.transformation = particleTransform;
             particleDrawer.draw(&context);
         }
-
-        std::sort(particles, particles + NUMOFPARTICLES - 1);
 
         // === DRAW GUI ===
         ImDrawList *drawList = ImGui::GetForegroundDrawList();

@@ -15,16 +15,16 @@ namespace util
     std::string pathname;
     int texWidth, texHeight, texChannels;
 
-    Textured2D(std::string path, bool srgb = false)
+    Textured2D(std::string path, bool srgb = false, bool alpha = false)
     {
       pathname = path;
       textureUnit = util::getTextureUnitId();
-      stbi_uc *pixels = stbi_load(pathname.c_str(), &texWidth, &texHeight, &texChannels, 3);
+      stbi_uc *pixels = stbi_load(pathname.c_str(), &texWidth, &texHeight, &texChannels, alpha ? 4 : 3);
 
       glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-      GLint storage = srgb ? GL_SRGB8 : GL_RGB8;
+      GLint storage = srgb ? (alpha ? GL_SRGB8_ALPHA8 : GL_SRGB8) : (alpha ? GL_RGBA8 : GL_RGB8 );
       glTextureStorage2D(texture, 1, storage, texWidth, texHeight);
-      glTextureSubImage2D(texture, 0, 0, 0, texWidth, texHeight, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+      glTextureSubImage2D(texture, 0, 0, 0, texWidth, texHeight, alpha ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, pixels);
 
       // Set behaviour for when texture coordinates are outside the [0, 1] range.
       glTextureParameteri(texture, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
