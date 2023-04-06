@@ -307,6 +307,9 @@ int main()
         if (shooting && canshoot && !gamestate::paused)
         {
             asteroidManager.shootAt(viewCamera.m_position, viewCamera.m_forward);
+            int particleIndex = (int)random::randomRange(0, NUMOFPARTICLES);
+            particles[particleIndex] = new Particle(-1, 50);
+            particles[particleIndex]->update(viewCamera.m_position + viewCamera.m_forward - viewCamera.m_up, viewCamera.m_forward, glm::vec3(0), glm::vec3(0), viewCamera.cameraPos());
             gamestate::shootCooldown = timing::time_s + shootCooldownTime;
         }
 
@@ -496,7 +499,7 @@ int main()
         for (Particle *p : particles) 
         {
             p->update(viewCamera.m_position - viewCamera.m_forward - viewCamera.m_up , -viewCamera.m_forward, viewCamera.m_up, viewCamera.m_right, cameraPos);
-            particleTransform = glm::scale(glm::translate(glm::mat4(1.0f), p->localPosition), glm::vec3(0.05f));
+            particleTransform = glm::scale(glm::translate(glm::mat4(1.0f), p->localPosition), glm::vec3(p->scale));
             particleTransform *= rotation;
             particleDrawer.transformation = particleTransform;
             particleDrawer.draw(&context);

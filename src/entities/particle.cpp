@@ -28,15 +28,17 @@ public:
 
     int lifetime;
     int age;
+    float scale;
     float cameradistance;
     glm::vec3 localPosition;
     glm::vec3 direction;
 
-    Particle(int initialage)
+    Particle(int initialage, int maxlifetime = 30, float particlescale = 0.05f)
     {
         cameradistance = 500.0f;
         age = initialage;
-        lifetime = 30;
+        scale = particlescale;
+        lifetime = maxlifetime;
         direction = glm::vec3(0);
         localPosition = glm::vec3(0);
     }
