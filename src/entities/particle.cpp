@@ -20,6 +20,8 @@ DISABLE_WARNINGS_POP()
 #include <framework/mesh.h>
 
 #include "../util/texture2D.cpp"
+#include "../util/vector.cpp"
+#include "../util/clock.cpp"
 #include "../materials/material.cpp"
 
 class Particle
@@ -30,6 +32,8 @@ public:
     int age;
     float scale;
     float cameradistance;
+    float speed;
+    float initialSpeed;
     glm::vec3 localPosition;
     glm::vec3 direction;
 
@@ -43,6 +47,22 @@ public:
         localPosition = glm::vec3(0);
     }
 
+    // void update(glm::vec3 position, glm::vec3 back, glm::vec3 up, glm::vec3 right, glm::mat4 mvp)
+    // {
+    //     age++;
+    //     if (age % lifetime == 0) {
+    //         float yoffset = random::randomRange(-0.1f, 0.1f);
+    //         float xoffset = random::randomRange(-0.1f, 0.1f);
+    //         localPosition = position + yoffset*up + xoffset * right;
+    //         direction = back;
+    //         age = 1;
+    //     }
+
+    //     localPosition += direction * speed * timing::delta_s;
+    //     glm::vec3 camspace = math::vec4toVec3(mvp * glm::vec4(position, 1.0f));
+    //     cameradistance = camspace.z;
+    // }
+    
     void update(glm::vec3 position, glm::vec3 back, glm::vec3 up, glm::vec3 right, glm::vec3 camerapos)
     {
         age++;
@@ -51,14 +71,15 @@ public:
             float xoffset = random::randomRange(-0.1f, 0.1f);
             localPosition = position + yoffset*up + xoffset * right;
             direction = back;
+            // speed = initialSpeed;
             age = 1;
         }
 
-        localPosition += direction*0.1f;
+        localPosition += direction * speed * timing::delta_s;
         cameradistance = glm::length(camerapos - localPosition);
     }
 
     bool operator<(Particle& that) {
-        return this->cameradistance > that.cameradistance;
+        return this->cameradistance < that.cameradistance;
     }
 };
